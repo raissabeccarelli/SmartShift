@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -17,27 +18,44 @@ public class TurnoService {
     @Autowired
     private TurnoRepository turnoRepository;
 
-    @Autowired
-    private AssenzaRepository assenzaRepository;
-
-    // L'algoritmo inizia qui 
     public void generaTurniPerSettimana(LocalDate inizioSettimana) {
-        
-        // Ciclo sui 7 giorni della settimana
+        List<Dipendente> dipendenti = dipendenteRepository.findAll();
+
+        // Ciclo per i 7 giorni della settimana
         for (int i = 0; i < 7; i++) {
             LocalDate giornoCorrente = inizioSettimana.plusDays(i);
-            
-            // Recuperiamo tutti i dipendenti
-            List<Dipendente> dipendenti = dipendenteRepository.findAll();
-
-            // STEP 1: Ordina dipendenti per ore lavorate (crescenti) 
-            // (Per ora lo facciamo semplice, poi lo perfezioniamo)
-            dipendenti.sort((d1, d2) -> Integer.compare(0, 0)); // Placeholder ordinamento
-
             System.out.println("Elaborazione giorno: " + giornoCorrente);
 
-            // Qui sotto dovremo inserire il ciclo delle Fasce Orarie
-            // e tutti i controlli IF (ferie, riposo, ecc.)
+            // Definiamo 3 slot orari fissi (Mattina, Pom, Sera)
+            LocalTime[][] slotOrari = {
+                {LocalTime.of(6, 0), LocalTime.of(14, 0)},
+                {LocalTime.of(14, 0), LocalTime.of(22, 0)},
+                {LocalTime.of(22, 0), LocalTime.of(6, 0)}
+            };
+
+            for (LocalTime[] slot : slotOrari) {
+                assegnaTurnoMigliore(giornoCorrente, slot[0], slot[1], dipendenti);
+            }
+        }
+    }
+
+    private void assegnaTurnoMigliore(LocalDate data, LocalTime inizio, LocalTime fine, List<Dipendente> dipendenti) {
+        for (Dipendente d : dipendenti) {
+            
+            // 1. Controllo base: Ha già lavorato oggi?
+            List<Turno> turniOggi = turnoRepository.findByDipendenteAndData(d, data);
+            if (!turniOggi.isEmpty()) {
+                continue; // Passa al prossimo dipendente
+            }
+
+            // SE ASSEGNIAMO IL TURNO:
+            // Usiamo l'ordine corretto: Data, Inizio, Fine, Dipendente
+            Turno nuovoTurno = new Turno(data, inizio, fine, d);
+            
+            turnoRepository.save(nuovoTurno);
+            System.out.println("Assegnato turno " + inizio + "-" + fine + " a " + d.getCognome());
+            
+            break; // Abbiamo coperto questo slot, stop ciclo dipendenti
         }
     }
 }
