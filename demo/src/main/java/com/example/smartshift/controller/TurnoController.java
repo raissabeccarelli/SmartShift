@@ -1,12 +1,15 @@
 package com.example.smartshift.controller;
 
+import com.example.smartshift.model.Turno;
 import com.example.smartshift.service.TurnoService;
+import com.example.smartshift.repository.TurnoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/turni")
@@ -15,14 +18,21 @@ public class TurnoController {
     @Autowired
     private TurnoService turnoService;
 
-    // Questo è il "bottone" che premeremo via browser
+    @Autowired
+    private TurnoRepository turnoRepository; // <--- Ci serve per leggere i dati
+
+    // 1. Endpoint per GENERARE i turni (già fatto)
     @GetMapping("/genera")
     public String generaTurni() {
-        // Facciamo partire l'algoritmo da Lunedì prossimo
-        LocalDate inizioSettimana = LocalDate.now(); 
-        
+        LocalDate inizioSettimana = LocalDate.now();
         turnoService.generaTurniPerSettimana(inizioSettimana);
-        
-        return "Turni generati con successo! Controlla la console e il database.";
+        return "Turni generati con successo!";
+    }
+
+    // 2. NUOVO Endpoint per LEGGERE i turni (JSON)
+    // Se vai su http://localhost:8080/api/turni vedrai i dati grezzi
+    @GetMapping
+    public List<Turno> getTuttiTurni() {
+        return turnoRepository.findAll();
     }
 }
