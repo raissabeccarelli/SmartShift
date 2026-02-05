@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    container_name: smartshift-backend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    environment:
+      # Sovrascrive il percorso del DB per farlo puntare al volume Docker
+      - SPRING_DATASOURCE_URL=jdbc:sqlite:/app/data/smartshift.db
