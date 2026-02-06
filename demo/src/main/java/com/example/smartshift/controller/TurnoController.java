@@ -31,6 +31,13 @@ public class TurnoController {
     }
 
     // 2. Endpoint per LEGGERE i turni (vai su http://localhost:8080/api/turni per vedere i dati grezzi)
+        LocalDate inizioSettimana = LocalDate.now();
+        turnoService.generaTurniPerSettimana(inizioSettimana);
+        return "Turni generati con successo!";
+    }
+
+    // 2. NUOVO Endpoint per LEGGERE i turni (JSON)
+    // Se vai su http://localhost:8080/api/turni vedrai i dati grezzi
     @GetMapping
     public List<Turno> getTuttiTurni() {
         return turnoRepository.findAll();
