@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>SmartShift - Calendario</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+        .navbar { background: #0d6efd; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        .navbar a { color: white; text-decoration: none; margin-right: 20px; font-weight: bold; }
+        table { width: 100%; background: white; border-collapse: collapse; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
+        th { background: #eee; }
+        .badge { padding: 5px 10px; color: white; border-radius: 15px; font-weight: bold; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    <a href="index.html" style="text-decoration: underline;">HOME</a>
+    <a href="richieste.html">RICHIESTE</a>
+    <a href="storico.html">CALENDARIO TURNI SETTIMANALE</a>
+</div>
+
+<h2>📅 I Tuoi Turni</h2>
+<table id="tabella">
+    <thead>
+        <tr><th>Giorno</th><th>Orario</th><th>Dipendente</th></tr>
+    </thead>
+    <tbody id="corpo"></tbody>
+</table>
+
+<script>
+    function stringToColor(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+        return '#' + "00000".substring(0, 6 - c.length) + c;
+    }
+
+    async function carica() {
+        const res = await fetch('/api/turni');
+        const turni = await res.json();
+        
+        turni.sort((a, b) => (a.data + a.oraInizio).localeCompare(b.data + b.oraInizio));
+        
+        const tbody = document.getElementById('corpo');
+        let lastDate = '';
+
+        turni.forEach(t => {
+            if (t.data !== lastDate) {
+                tbody.innerHTML += `<tr style="background:#e9ecef; font-weight:bold;"><td colspan="3">${t.data}</td></tr>`;
+                lastDate = t.data;
+            }
+            const color = stringToColor(t.dipendente.cognome);
+            tbody.innerHTML += `
+                <tr>
+                    <td></td>
+                    <td>⏰ ${t.oraInizio} - ${t.oraFine}</td>
+                    <td><span class="badge" style="background-color:${color}">👤 ${t.dipendente.cognome} ${t.dipendente.nome}</span></td>
+                </tr>`;
+        });
+    }
+    carica();
+</script>
+
+</body>
+</html>

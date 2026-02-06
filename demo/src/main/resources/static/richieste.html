@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>SmartShift - Richieste</title>
+    <link rel="stylesheet" href="style.css"> <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+        .navbar { background: #0d6efd; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        .navbar a { color: white; text-decoration: none; margin-right: 20px; font-weight: bold; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 600px; margin: auto; }
+        input, select, button { width: 100%; padding: 10px; margin-top: 10px; box-sizing: border-box; }
+        button { background: #0d6efd; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    <a href="index.html" style="text-decoration: underline;">HOME</a>
+    <a href="richieste.html">RICHIESTE</a>
+    <a href="storico.html">CALENDARIO TURNI SETTIMANALE</a>
+</div>
+
+<div class="card">
+    <h2>Inserisci Assenza</h2>
+    <label>Dipendente:</label>
+    <select id="selectDipendente"></select>
+
+    <label>Data Assenza:</label>
+    <input type="date" id="dataAssenza">
+
+    <label>Tipo:</label>
+    <select id="tipoAssenza">
+        <option value="FERIE">Ferie</option>
+        <option value="MALATTIA">Malattia</option>
+        <option value="PERMESSO">Permesso</option>
+    </select>
+
+    <button onclick="inviaAssenza()">Registra Assenza</button>
+</div>
+
+<script>
+    async function caricaDipendenti() {
+        const res = await fetch('/api/turni/dipendenti');
+        const lista = await res.json();
+        const select = document.getElementById('selectDipendente');
+        lista.forEach(d => select.innerHTML += `<option value="${d.id}">${d.cognome} ${d.nome}</option>`);
+    }
+
+    async function inviaAssenza() {
+        const id = document.getElementById('selectDipendente').value;
+        const data = document.getElementById('dataAssenza').value;
+        const tipo = document.getElementById('tipoAssenza').value;
+        
+        if(!data) return alert("Metti la data!");
+
+        await fetch(`/api/turni/assenza?dipendenteId=${id}&data=${data}&tipo=${tipo}`, { method: 'POST' });
+        alert("Salvato!");
+    }
+
+    caricaDipendenti();
+</script>
+
+</body>
+</html>

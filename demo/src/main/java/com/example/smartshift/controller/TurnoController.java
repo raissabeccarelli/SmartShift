@@ -1,6 +1,8 @@
 package com.example.smartshift.controller;
 
+import com.example.smartshift.model.Dipendente;
 import com.example.smartshift.model.Turno;
+import com.example.smartshift.repository.DipendenteRepository;
 import com.example.smartshift.repository.TurnoRepository;
 import com.example.smartshift.service.TurnoService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,44 +15,37 @@ import java.util.List;
 @RequestMapping("/api/turni")
 public class TurnoController {
 
-    @Autowired
-    private TurnoService turnoService;
+    @Autowired private TurnoService turnoService;
+    @Autowired private TurnoRepository turnoRepository;
+    @Autowired private DipendenteRepository dipendenteRepository;
 
-    @Autowired
-    private TurnoRepository turnoRepository;
-
-    // 1. Endpoint per GENERARE i turni
-    // URL: GET /api/turni/genera
-    @GetMapping("/genera")
-    public String generaTurni() {
-        // Calcoliamo il Lunedì di questa settimana
-        LocalDate oggi = LocalDate.now();
-        LocalDate lunediCorrente = oggi.with(java.time.DayOfWeek.MONDAY);
-
-        // Generiamo i turni partendo da Lunedì (anche se è passato, li rigenera)
-        turnoService.generaTurniPerSettimana(lunediCorrente); 
+    // 1. GENERAZIONE
+    @PostMapping("/genera")
+    public String generaTurni(@RequestParam(required = false) String data) {
+        LocalDate start = (data != null) ? LocalDate.parse(data) : LocalDate.now();
+        // Spostiamoci al lunedì di quella settimana
+        LocalDate lunedi = start.with(java.time.DayOfWeek.MONDAY);
         
-        return "Turni generati per la settimana del " + lunediCorrente;
+        turnoService.generaTurniPerSettimana(lunedi);
+        return "Turni generati con successo per la settimana del " + lunedi;
     }
 
-    // 2. Endpoint per LEGGERE i turni (JSON per il Frontend)
-    // URL: GET /api/turni
+    // 2. LETTURA TURNI
     @GetMapping
     public List<Turno> getTuttiTurni() {
         return turnoRepository.findAll();
     }
 
-    // 3. Endpoint per INSERIRE ASSENZE (Collegato al Service che abbiamo fatto prima)
-    // URL: POST /api/turni/assenza?dipendenteId=1&data=2026-02-10&tipo=FERIE
+    // 3. INSERIMENTO ASSENZA
     @PostMapping("/assenza")
-    public String inserisciAssenza(
-            @RequestParam Long dipendenteId,
-            @RequestParam String data, 
-            @RequestParam String tipo) {
-        
-        LocalDate dataAssenza = LocalDate.parse(data);
-        turnoService.aggiungiAssenza(dipendenteId, dataAssenza, tipo);
+    public String inserisciAssenza(@RequestParam Long dipendenteId, @RequestParam String data, @RequestParam String tipo) {
+        turnoService.aggiungiAssenza(dipendenteId, LocalDate.parse(data), tipo);
+        return "Assenza inserita!";
+    }
 
-        return "Assenza inserita con successo!";
+    // 4. LISTA DIPENDENTI (Serve per il menu a tendina nel frontend)
+    @GetMapping("/dipendenti")
+    public List<Dipendente> getDipendenti() {
+        return dipendenteRepository.findAll();
     }
 }
