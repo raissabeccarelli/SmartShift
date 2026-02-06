@@ -24,6 +24,13 @@ public class TurnoController {
     // 1. Endpoint per GENERARE i turni (già fatto)
     @GetMapping("/genera")
     public String generaTurni() {
+        // Qui decidiamo: "Genera turni partendo da OGGI"
+        turnoService.generaTurniPerSettimana(LocalDate.now()); 
+        
+        return "Turni generati con successo!";
+    }
+
+    // 2. Endpoint per LEGGERE i turni (vai su http://localhost:8080/api/turni per vedere i dati grezzi)
         LocalDate inizioSettimana = LocalDate.now();
         turnoService.generaTurniPerSettimana(inizioSettimana);
         return "Turni generati con successo!";
