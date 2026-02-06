@@ -8,9 +8,6 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.List;
 
-public interface AssenzaRepository extends JpaRepository<Assenza, Long> {
-    
-    // Trova se c'è un'assenza per quel dipendente in quella data specifica
 @Repository
 public interface AssenzaRepository extends JpaRepository<Assenza, Long> {
 

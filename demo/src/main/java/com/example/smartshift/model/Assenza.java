@@ -3,6 +3,8 @@ package com.example.smartshift.model;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Entity
 @Table(name = "assenze")
 public class Assenza {
@@ -18,6 +20,7 @@ public class Assenza {
 
     @ManyToOne
     @JoinColumn(name = "dipendente_id")
+    @JsonIgnore
     private Dipendente dipendente;
 
     // --- COSTRUTTORI ---
