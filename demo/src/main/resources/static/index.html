@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartShift - Pianificazione Turni</title>
+    <style>
+        :root { --primary: #0d6efd; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; color: #333; }
+        
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: var(--primary); margin-bottom: 30px; }
+
+        .controls { display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; }
+        button {
+            padding: 10px 20px; font-size: 16px; border: none; border-radius: 5px; cursor: pointer; transition: 0.2s;
+        }
+        .btn-gen { background: #198754; color: white; }
+        .btn-gen:hover { background: #157347; }
+        .btn-reload { background: #6c757d; color: white; }
+
+        /* Tabella */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: var(--primary); color: white; text-transform: uppercase; font-size: 14px; }
+        tr:hover { background-color: #f1f1f1; }
+
+        /* Badge Dipendente (Colori automatici) */
+        .badge {
+            display: inline-block; padding: 5px 10px; border-radius: 20px; 
+            font-weight: bold; color: white; font-size: 0.9em;
+            text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+        }
+
+        /* Gestione visuale delle date */
+        .date-header { background-color: #e9ecef; font-weight: bold; color: #495057; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📅 SmartShift </h1>
+
+    <div class="controls">
+        <button class="btn-gen" onclick="generaTurni()">⚙️ Genera Nuova Settimana</button>
+        <button class="btn-reload" onclick="caricaTurni()">🔄 Aggiorna Vista</button>
+    </div>
+
+    <table id="tabellaTurni">
+        <thead>
+            <tr>
+                <th>Orario</th>
+                <th>Dipendente</th>
+                <th>Ruolo/Note</th>
+            </tr>
+        </thead>
+        <tbody id="corpoTabella">
+            </tbody>
+    </table>
+</div>
+
+<script>
+    // Funzione per generare un colore univoco basato sul nome
+    function stringToColor(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+        return '#' + "00000".substring(0, 6 - c.length) + c;
+    }
+
+    async function caricaTurni() {
+        const response = await fetch('/api/turni');
+        const turni = await response.json();
+        
+        // Ordiniamo i turni per data e orario
+        turni.sort((a, b) => (a.data + a.oraInizio).localeCompare(b.data + b.oraInizio));
+
+        const tbody = document.getElementById('corpoTabella');
+        tbody.innerHTML = '';
+        
+        let lastDate = '';
+
+        turni.forEach(turno => {
+            // Se cambia la data, metti una riga separatrice
+            if (turno.data !== lastDate) {
+                const dateRow = `<tr class="date-header"><td colspan="3">${new Date(turno.data).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</td></tr>`;
+                tbody.innerHTML += dateRow;
+                lastDate = turno.data;
+            }
+
+            const nomeCompleto = `${turno.dipendente.cognome} ${turno.dipendente.nome}`;
+            const colore = stringToColor(turno.dipendente.cognome);
+
+            const riga = `
+                <tr>
+                    <td>⏰ ${turno.oraInizio.substring(0,5)} - ${turno.oraFine.substring(0,5)}</td>
+                    <td>
+                        <span class="badge" style="background-color: ${colore}">
+                            👤 ${nomeCompleto}
+                        </span>
+                    </td>
+                    <td style="color: #666; font-size: 0.9em;">
+                        Contratto: ${turno.dipendente.oreSettimanaliContratto}h
+                    </td>
+                </tr>
+            `;
+            tbody.innerHTML += riga;
+        });
+    }
+
+    async function generaTurni() {
+        if(!confirm("Vuoi rigenerare i turni? I dati attuali verranno sovrascritti.")) return;
+        
+        try {
+            const response = await fetch('/api/turni/genera'); // Nota: assicurati che il Controller risponda a GET o POST correttamente
+            if(response.ok) {
+                alert("Turni generati con successo!");
+                caricaTurni();
+            } else {
+                alert("Errore nella generazione");
+            }
+        } catch (e) {
+            alert("Errore di connessione al server");
+        }
+    }
+
+    // Carica all'avvio
+    caricaTurni();
+</script>
+
+</body>
+</html>
