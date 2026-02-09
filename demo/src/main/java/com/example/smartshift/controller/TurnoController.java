@@ -48,4 +48,10 @@ public class TurnoController {
     public List<Dipendente> getDipendenti() {
         return dipendenteRepository.findAll();
     }
+
+    // AGGIUNGE UN NUOVO DIPENDETE
+    @PostMapping("/dipendenti")
+    public Dipendente aggiungiDipendente(@RequestBody Dipendente nuovoDipendente) {
+        return dipendenteRepository.save(nuovoDipendente);
+    }
 }

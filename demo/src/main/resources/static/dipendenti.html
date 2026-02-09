@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>SmartShift - Dipendenti</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f4f4f4; color: #333; }
+        
+        /* Navbar Stile */
+        .navbar { background: #0d6efd; padding: 15px; margin-bottom: 20px; border-radius: 5px; display: flex; gap: 20px; }
+        .navbar a { color: white; text-decoration: none; font-weight: bold; opacity: 0.9; transition: 0.2s; }
+        .navbar a:hover { opacity: 1; text-decoration: underline; }
+
+        /* Card Stile */
+        .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto; }
+        h2 { margin-top: 0; color: #0d6efd; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+
+        /* Form Stile */
+        label { display: block; margin: 15px 0 5px; font-weight: bold; }
+        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        
+        /* Bottone */
+        button { background: #198754; color: white; border: none; padding: 12px; width: 100%; margin-top: 20px; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #157347; }
+
+        /* Lista veloce */
+        .lista-dipendenti { margin-top: 30px; }
+        .item-dipendente { background: #e9ecef; padding: 10px; margin-bottom: 5px; border-radius: 5px; display: flex; justify-content: space-between; }
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    <a href="index.html">Generatore</a>
+    <a href="storico.html">Calendario</a>
+    <a href="richieste.html">Ferie</a>
+    <a href="dipendenti.html" style="text-decoration: underline;">Dipendenti</a>
+</div>
+
+<div class="card">
+    <h2>Assumi Nuovo Dipendente</h2>
+    <p>Inserisci i dati per aggiungere un membro al team.</p>
+
+    <label>Nome:</label>
+    <input type="text" id="nome" placeholder="Es. Mario">
+
+    <label>Cognome:</label>
+    <input type="text" id="cognome" placeholder="Es. Rossi">
+
+    <div style="display: flex; gap: 15px;">
+        <div style="flex: 1;">
+            <label>Ore Settimanali (Contratto):</label>
+            <input type="number" id="oreSett" placeholder="Es. 40">
+        </div>
+        <div style="flex: 1;">
+            <label>Max Ore Giornaliere:</label>
+            <input type="number" id="oreMax" placeholder="Es. 8">
+        </div>
+    </div>
+
+    <button onclick="salvaDipendente()">Salva Dipendente</button>
+
+    <div class="lista-dipendenti">
+        <h3>Team Attuale</h3>
+        <div id="listaTeam"></div>
+    </div>
+</div>
+
+<script>
+    // 1. Funzione per SALVARE
+    async function salvaDipendente() {
+        // Leggiamo i valori dal form
+        const dati = {
+            nome: document.getElementById('nome').value,
+            cognome: document.getElementById('cognome').value,
+            oreSettimanaliContratto: document.getElementById('oreSett').value,
+            oreGiornaliereMax: document.getElementById('oreMax').value
+        };
+
+        // Validazione semplice
+        if(!dati.nome || !dati.cognome || !dati.oreSettimanaliContratto) {
+            alert("Compila tutti i campi!");
+            return;
+        }
+
+        // Chiamata al Backend (POST)
+        const response = await fetch('/api/turni/dipendenti', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dati) // Trasforma l'oggetto JS in testo JSON
+        });
+
+        if (response.ok) {
+            alert("Dipendente aggiunto con successo!");
+            // Pulisci i campi
+            document.getElementById('nome').value = '';
+            document.getElementById('cognome').value = '';
+            caricaLista(); // Aggiorna la lista sotto
+        } else {
+            alert("Errore nel salvataggio");
+        }
+    }
+
+    // 2. Funzione per CARICARE la lista (per vedere chi c'è già)
+    async function caricaLista() {
+        const res = await fetch('/api/turni/dipendenti');
+        const dipendenti = await res.json();
+        
+        const container = document.getElementById('listaTeam');
+        container.innerHTML = ''; // Pulisci
+
+        dipendenti.forEach(d => {
+            container.innerHTML += `
+                <div class="item-dipendente">
+                    <span>👤 <strong>${d.cognome} ${d.nome}</strong></span>
+                    <span style="font-size: 0.9em; color: #666;">${d.oreSettimanaliContratto}h / sett</span>
+                </div>
+            `;
+        });
+    }
+
+    // Carica la lista appena apri la pagina
+    caricaLista();
+</script>
+
+</body>
+</html>
