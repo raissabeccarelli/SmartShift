@@ -31,15 +31,13 @@ Il progetto ha un **Backend funzionante** e un **Frontend Web** (HTML/JS) già i
 ## Prossimi passi
 Queste sono le funzionalità da implementare nelle prossime iterazioni:
 
-1.  **Gestione Dipendenti:**
-    * [ ] Creare pagina/form per aggiungere nuovi dipendenti al DB da interfaccia web.
-2.  **Storico e Versionamento:**
+1.  **Storico e Versionamento:**
     * [ ] Salvare i turni raggruppati per "Settimana" (es. settimana 1, settimana 2) per poter navigare tra passato e futuro senza sovrascrivere tutto.
-3.  **Assenze Avanzate:**
+2.  **Assenze Avanzate:**
     * [ ] Aggiungere campo "Motivazione" per i permessi.
     * [ ] Gestione "Periodo di Ferie" (Range di date).
     * [ ] Controllo sul numero massimo di ferie annuali residue.
-4.  **UI e Filtri:**
+3.  **UI e Filtri:**
     * [ ] Possibilità di filtrare il calendario per vedere solo i turni di una specifica persona.
     * [ ] Alert Visivi: Evidenziare in ROSSO nel calendario le fasce che sono rimaste scoperte.
     * [ ] Modifica manuale dei turni generati (?).
