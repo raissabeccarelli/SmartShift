@@ -3,13 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <title>SmartShift - Richieste</title>
-    <link rel="stylesheet" href="style.css"> <style>
-        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
-        .navbar { background: #0d6efd; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
-        .navbar a { color: white; text-decoration: none; margin-right: 20px; font-weight: bold; }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 600px; margin: auto; }
-        input, select, button { width: 100%; padding: 10px; margin-top: 10px; box-sizing: border-box; }
-        button { background: #0d6efd; color: white; border: none; cursor: pointer; }
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f4f4f4; }
+        .navbar { background: #0d6efd; padding: 15px; margin-bottom: 20px; border-radius: 5px; display: flex; gap: 20px; }
+        .navbar a { color: white; text-decoration: none; font-weight: bold; }
+        .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto; }
+        label { display: block; margin: 15px 0 5px; font-weight: bold; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        button { background: #0d6efd; color: white; border: none; padding: 12px; width: 100%; margin-top: 20px; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #0b5ed7; }
+        
+        .hidden { display: none; } /* Classe per nascondere i campi */
+        .info-residuo { font-size: 0.9em; color: #666; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -17,46 +22,124 @@
 <div class="navbar">
     <a href="index.html">Generatore</a>
     <a href="storico.html">Calendario</a>
-    <a href="richieste.html">Ferie</a>
+    <a href="richieste.html" style="text-decoration: underline;">Ferie</a>
+    <a href="dipendenti.html">Dipendenti</a>
+</div>
 
 <div class="card">
-    <h2>Inserisci assenza</h2>
+    <h2>Gestione Assenze</h2>
+
     <label>Dipendente:</label>
-    <select id="selectDipendente"></select>
+    <select id="selectDipendente" onchange="aggiornaResiduo()"></select>
+    <div id="textResiduo" class="info-residuo">Ferie residue: -</div>
 
-    <label>Data Assenza:</label>
-    <input type="date" id="dataAssenza">
-
-    <label>Tipo:</label>
-    <select id="tipoAssenza">
-        <option value="FERIE">Ferie</option>
+    <label>Tipo Assenza:</label>
+    <select id="tipoAssenza" onchange="gestisciCampi()">
         <option value="MALATTIA">Malattia</option>
+        <option value="FERIE">Ferie</option>
         <option value="PERMESSO">Permesso</option>
     </select>
 
-    <button onclick="inviaAssenza()">Registra Assenza</button>
+    <div style="display: flex; gap: 10px;">
+        <div style="flex: 1;">
+            <label>Dal:</label>
+            <input type="date" id="dataInizio">
+        </div>
+        <div style="flex: 1;" id="boxDataFine">
+            <label>Al (Opzionale):</label>
+            <input type="date" id="dataFine">
+        </div>
+    </div>
+
+    <div id="boxMotivazione" class="hidden">
+        <label>Motivazione (Obbligatoria):</label>
+        <textarea id="motivazione" placeholder="Es. Visita medica, motivi familiari..."></textarea>
+    </div>
+
+    <button onclick="inviaAssenza()">Invia Richiesta</button>
 </div>
 
 <script>
+    let dipendentiData = [];
+
     async function caricaDipendenti() {
         const res = await fetch('/api/turni/dipendenti');
-        const lista = await res.json();
+        dipendentiData = await res.json(); // Salviamo i dati per leggere le ferie residue
+        
         const select = document.getElementById('selectDipendente');
-        lista.forEach(d => select.innerHTML += `<option value="${d.id}">${d.cognome} ${d.nome}</option>`);
+        select.innerHTML = '';
+        dipendentiData.forEach(d => {
+            select.innerHTML += `<option value="${d.id}">${d.cognome} ${d.nome}</option>`;
+        });
+        aggiornaResiduo();
+    }
+
+    function aggiornaResiduo() {
+        const id = document.getElementById('selectDipendente').value;
+        const dip = dipendentiData.find(d => d.id == id);
+        if(dip) {
+            document.getElementById('textResiduo').innerText = `Ferie residue: ${dip.ferieResidue} giorni`;
+        }
+    }
+
+    function gestisciCampi() {
+        const tipo = document.getElementById('tipoAssenza').value;
+        
+        // Gestione Data Fine (Ha senso per ferie/malattia, meno per permessi orari ma lo lasciamo opzionale)
+        // document.getElementById('boxDataFine').classList.remove('hidden');
+
+        // Gestione Motivazione (Solo per PERMESSO)
+        if (tipo === 'PERMESSO') {
+            document.getElementById('boxMotivazione').classList.remove('hidden');
+        } else {
+            document.getElementById('boxMotivazione').classList.add('hidden');
+        }
     }
 
     async function inviaAssenza() {
         const id = document.getElementById('selectDipendente').value;
-        const data = document.getElementById('dataAssenza').value;
+        const start = document.getElementById('dataInizio').value;
+        const end = document.getElementById('dataFine').value;
         const tipo = document.getElementById('tipoAssenza').value;
-        
-        if(!data) return alert("Metti la data!");
+        const motivazione = document.getElementById('motivazione').value;
 
-        await fetch(`/api/turni/assenza?dipendenteId=${id}&data=${data}&tipo=${tipo}`, { method: 'POST' });
-        alert("Salvato!");
+        if(!start) return alert("Inserisci almeno la data di inizio!");
+
+        // Costruiamo l'URL con i parametri
+        const params = new URLSearchParams({
+            dipendenteId: id,
+            dataInizio: start,
+            tipo: tipo,
+            motivazione: motivazione
+        });
+        if(end) params.append('dataFine', end);
+
+        const res = await fetch('/api/turni/assenza', {
+            method: 'POST',
+            body: params
+        });
+
+        if(res.ok) {
+            alert("Richiesta salvata!");
+            caricaDipendenti(); // Ricarica per aggiornare il saldo ferie visualizzato
+        } else {
+            const errorMsg = await res.text(); // Legge il messaggio dal backend
+            // Puliamo il messaggio d'errore brutto di Spring
+            let cleanMsg = "Errore nel salvataggio";
+            if (errorMsg.includes("message")) {
+                 // Un po' di parsing grezzo per prendere solo il messaggio utile
+                 try {
+                    const jsonErr = JSON.parse(errorMsg);
+                    cleanMsg = jsonErr.message || cleanMsg;
+                 } catch(e) { cleanMsg = errorMsg; }
+            }
+            alert("ERRORE: " + cleanMsg);
+        }
     }
 
+    // Init
     caricaDipendenti();
+    gestisciCampi();
 </script>
 
 </body>

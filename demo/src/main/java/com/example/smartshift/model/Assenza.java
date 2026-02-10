@@ -15,8 +15,9 @@ public class Assenza {
 
     private LocalDate data; // Giorno dell'assenza
 
-    // Può essere "FERIE" o "PERMESSO"
+    // Può essere ferie, permesso o malattia
     private String tipo; 
+    private String motivazione;
 
     @ManyToOne
     @JoinColumn(name = "dipendente_id")
@@ -26,10 +27,11 @@ public class Assenza {
     // --- COSTRUTTORI ---
     public Assenza() {}
 
-    public Assenza(LocalDate data, String tipo, Dipendente dipendente) {
+    public Assenza(LocalDate data, String tipo, Dipendente dipendente, String motivazione) {
         this.data = data;
         this.tipo = tipo;
         this.dipendente = dipendente;
+        this.motivazione = motivazione;
     }
 
     // --- GETTER E SETTER ---
@@ -44,4 +46,7 @@ public class Assenza {
 
     public Dipendente getDipendente() { return dipendente; }
     public void setDipendente(Dipendente dipendente) { this.dipendente = dipendente; }
+
+    public String getMotivazione() { return motivazione; }
+    public void setMotivazione(String motivazione) { this.motivazione = motivazione; }
 }

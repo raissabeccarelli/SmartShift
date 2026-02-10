@@ -38,9 +38,24 @@ public class TurnoController {
 
     // 3. INSERIMENTO ASSENZA
     @PostMapping("/assenza")
-    public String inserisciAssenza(@RequestParam Long dipendenteId, @RequestParam String data, @RequestParam String tipo) {
-        turnoService.aggiungiAssenza(dipendenteId, LocalDate.parse(data), tipo);
-        return "Assenza inserita!";
+    public String inserisciAssenza(
+            @RequestParam Long dipendenteId,
+            @RequestParam String dataInizio,
+            @RequestParam(required = false) String dataFine,
+            @RequestParam String tipo,
+            @RequestParam(required = false) String motivazione) {
+
+        LocalDate start = LocalDate.parse(dataInizio);
+        LocalDate end = (dataFine != null && !dataFine.isEmpty()) ? LocalDate.parse(dataFine) : start;
+
+        try {
+            turnoService.aggiungiAssenza(dipendenteId, start, end, tipo, motivazione);
+            return "Assenza inserita con successo!";
+        } catch (RuntimeException e) {
+            // Ritorna l'errore al frontend (es. "Ferie insufficienti")
+            throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 
     // 4. LISTA DIPENDENTI (Serve per il menu a tendina nel frontend)

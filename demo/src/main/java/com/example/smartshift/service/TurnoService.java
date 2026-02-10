@@ -40,28 +40,52 @@ public class TurnoService {
         }
     }
 
-    // --- METODO PER AGGIUNGERE ASSENZE ---
-    public void aggiungiAssenza(Long dipendenteId, LocalDate data, String tipo) {
+    // Aggiungo assenze
+    public void aggiungiAssenza(Long dipendenteId, LocalDate dataInizio, LocalDate dataFine, String tipo, String motivazione) {
         Dipendente d = dipendenteRepository.findById(dipendenteId)
                 .orElseThrow(() -> new RuntimeException("Dipendente non trovato!"));
-        assenzaRepository.save(new Assenza(data, tipo, d));
-        System.out.println("Nuova assenza registrata per " + d.getCognome() + " il " + data);
+
+        if (dataFine == null) dataFine = dataInizio;
+        long giorniRichiesti = java.time.temporal.ChronoUnit.DAYS.between(dataInizio, dataFine) + 1;
+        // Controllo le ferie residue
+        if (tipo.equalsIgnoreCase("FERIE")) {
+            if (d.getFerieResidue() < giorniRichiesti) {
+                throw new RuntimeException("ERRORE: Ferie insufficienti! Hai " + d.getFerieResidue() + " giorni, ma ne chiedi " + giorniRichiesti);
+            }
+            // Scaliamo le ferie da quelle residue
+            d.setFerieResidue(d.getFerieResidue() - (int) giorniRichiesti);
+            dipendenteRepository.save(d);
+        }
+
+        // Per i permessi aggiungo la motivazione
+        if (tipo.equalsIgnoreCase("PERMESSO") && (motivazione == null || motivazione.trim().isEmpty())) {
+            throw new RuntimeException("ERRORE: Per i permessi è obbligatoria la motivazione!");
+        }
+
+        // Salva una riga per ogni giorno nel database
+        LocalDate current = dataInizio;
+        while (!current.isAfter(dataFine)) {
+            assenzaRepository.save(new Assenza(current, tipo, d, motivazione));
+            System.out.println("Assenza registrata: " + d.getCognome() + " il " + current);
+            current = current.plusDays(1);
+        }
     }
 
-    // --- GENERATORE DI TURNI ---
+    // Algoritmo di generatore turni
     public void generaTurniPerSettimana(LocalDate dataInizio) {
         List<Dipendente> dipendenti = dipendenteRepository.findAll();
         LocalDate dataFine = dataInizio.plusDays(7);
 
-        // Configurazione: Mattina (3 persone), Pomeriggio (2 persone), Notte (1 persona)
+        // Configurazione
         List<ConfigurazioneSlot> slots = List.of(
-            new ConfigurazioneSlot(6, 14, 3),
-            new ConfigurazioneSlot(14, 22, 2),
-            new ConfigurazioneSlot(22, 6, 1)
+            new ConfigurazioneSlot(6, 12, 3),
+            new ConfigurazioneSlot(12, 18, 4),
+            new ConfigurazioneSlot(18, 00, 5),
+            new ConfigurazioneSlot(00, 6, 2)
         );
 
         for (LocalDate data = dataInizio; data.isBefore(dataFine); data = data.plusDays(1)) {
-            System.out.println("--- Elaborazione giorno: " + data + " ---");
+            System.out.println("Elaborazione giorno: " + data );
 
             for (ConfigurazioneSlot slot : slots) {
                 Collections.shuffle(dipendenti);
@@ -70,7 +94,7 @@ public class TurnoService {
         }
     }
 
-    // --- ALGORITMO DI ASSEGNAZIONE ---
+    // Algoritmo di assegnazione dei turni
     private void assegnaTurnoMigliore(LocalDate data, LocalTime inizio, LocalTime fine, int numeroMinimo, List<Dipendente> dipendenti) {
         
         LocalDate inizioSettimana = data.with(java.time.DayOfWeek.MONDAY);
