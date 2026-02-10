@@ -2,46 +2,102 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>SmartShift - Generatore</title>
-    <style>
-        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
-        .navbar { background: #0d6efd; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
-        .navbar a { color: white; text-decoration: none; margin-right: 20px; font-weight: bold; }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 600px; margin: auto; text-align: center; }
-        input, button { padding: 10px; margin-top: 15px; width: 80%; }
-        button { background: #198754; color: white; border: none; font-size: 1.2em; cursor: pointer; }
-    </style>
+    <title>SmartShift - Home</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="navbar">
-    <a href="index.html">Generatore</a>
-    <a href="storico.html">Calendario</a>
-    <a href="richieste.html">Richieste</a>
-    <a href="dipendenti.html">Dipendenti</a> </div>
+    <a href="index.html" class="active">Home</a>
+    <a href="calendario.html">Calendario</a>
+    <a href="dipendenti.html">Gestione Dipendenti</a>
+</div>
 
-<div class="card">
-    <h1>Generatore Turni</h1>
-    <p>Scegli una data qualsiasi della settimana da pianificare.</p>
-    
-    <input type="date" id="dataGen">
-    <br>
-    <button onclick="genera()">Genera Turni</button>
+<div class="container">
+    <div class="card">
+        <h1>Benvenuto in SmartShift</h1>
+        <p>Ecco la programmazione per la <strong>Settimana Corrente</strong>.</p>
+        <div id="date-range" style="margin-bottom: 15px; font-weight: bold; color: #666;"></div>
+        
+        <table id="tabella-home">
+            <thead>
+                <tr>
+                    <th>Giorno</th>
+                    <th>Orario</th>
+                    <th>Dipendente</th>
+                </tr>
+            </thead>
+            <tbody id="corpo-home">
+                <tr><td colspan="3" style="text-align:center;">Caricamento turni...</td></tr>
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <script>
-    async function genera() {
-        const data = document.getElementById('dataGen').value;
-        if(!data) return alert("Seleziona una data!");
-
-        if(confirm("Generare i turni?")) {
-            const res = await fetch(`/api/turni/genera?data=${data}`, { method: 'POST' });
-            if(res.ok) {
-                alert("Fatto! Ora ti porto al calendario.");
-                window.location.href = "storico.html"; // Redirect automatico!
-            }
-        }
+    // Utility per le date
+    function getMonday(d) {
+        d = new Date(d);
+        var day = d.getDay(),
+            diff = d.getDate() - day + (day == 0 ? -6 : 1); 
+        return new Date(d.setDate(diff));
     }
+
+    async function caricaHome() {
+        const oggi = new Date();
+        const lunedi = getMonday(oggi);
+        const domenica = new Date(lunedi);
+        domenica.setDate(lunedi.getDate() + 6);
+
+        // Mostra range date
+        document.getElementById('date-range').innerText = 
+            `Dal ${lunedi.toLocaleDateString()} al ${domenica.toLocaleDateString()}`;
+
+        // Fetch di TUTTI i turni (poi filtriamo lato client)
+        // NOTA: Se il backend supporta filtri per data, meglio usarli lì!
+        const res = await fetch('/api/turni');
+        const turni = await res.json();
+
+        // Filtra solo turni di questa settimana
+        const turniSettimana = turni.filter(t => {
+            const dataTurno = new Date(t.data);
+            // Azzera ore per confronto preciso
+            dataTurno.setHours(0,0,0,0);
+            lunedi.setHours(0,0,0,0);
+            domenica.setHours(23,59,59,999);
+            return dataTurno >= lunedi && dataTurno <= domenica;
+        });
+
+        // Ordina
+        turniSettimana.sort((a, b) => (a.data + a.oraInizio).localeCompare(b.data + b.oraInizio));
+
+        // Render
+        const tbody = document.getElementById('corpo-home');
+        tbody.innerHTML = '';
+        
+        if(turniSettimana.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Nessun turno pianificato per questa settimana. <a href="calendario.html">Vai al Calendario</a></td></tr>';
+            return;
+        }
+
+        let lastDate = '';
+        turniSettimana.forEach(t => {
+            // Raggruppamento visivo per giorno
+            if (t.data !== lastDate) {
+                tbody.innerHTML += `<tr style="background:#f1f8ff;"><td colspan="3"><strong>${t.data}</strong></td></tr>`;
+                lastDate = t.data;
+            }
+            tbody.innerHTML += `
+                <tr>
+                    <td></td>
+                    <td>⏰ ${t.oraInizio} - ${t.oraFine}</td>
+                    <td>👤 ${t.dipendente.cognome} ${t.dipendente.nome}</td>
+                </tr>
+            `;
+        });
+    }
+
+    caricaHome();
 </script>
 
 </body>

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>SmartShift - Calendario</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="navbar">
+    <a href="index.html">Home</a>
+    <a href="calendario.html" class="active">Calendario</a>
+    <a href="dipendenti.html">Gestione Dipendenti</a>
+</div>
+
+<div class="container">
+    <h1>Pianificazione Settimanale</h1>
+    <p>Seleziona una settimana per visualizzarla o per generare i turni.</p>
+
+    <div id="lista-settimane"></div>
+
+    <div id="modalTurni" class="modal">
+        <div class="modal-content" style="width: 800px;">
+            <span class="close" onclick="chiudiModal()">&times;</span>
+            <h2 id="modalTitle">Turni Settimana</h2>
+            <table id="modalTable">
+                <thead><tr><th>Data</th><th>Ora</th><th>Dipendente</th></tr></thead>
+                <tbody id="modalBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let tuttiITurni = [];
+
+    // 1. Calcola le prossime 5 settimane
+    function getNextWeeks() {
+        let weeks = [];
+        let current = new Date();
+        // Imposta al Lunedì corrente
+        let day = current.getDay();
+        let diff = current.getDate() - day + (day == 0 ? -6 : 1);
+        current.setDate(diff);
+
+        for (let i = 0; i < 5; i++) {
+            let start = new Date(current);
+            let end = new Date(current);
+            end.setDate(start.getDate() + 6);
+            
+            weeks.push({
+                start: start,
+                end: end,
+                startStr: start.toISOString().split('T')[0], // YYYY-MM-DD
+                endStr: end.toISOString().split('T')[0]
+            });
+            
+            // Avanza di una settimana
+            current.setDate(current.getDate() + 7);
+        }
+        return weeks;
+    }
+
+    // 2. Carica dati e costruisci UI
+    async function initCalendario() {
+        const res = await fetch('/api/turni');
+        tuttiITurni = await res.json();
+        const weeks = getNextWeeks();
+        const container = document.getElementById('lista-settimane');
+
+        weeks.forEach(week => {
+            // Controlla se c'è almeno un turno in questo range
+            const hasShifts = tuttiITurni.some(t => {
+                return t.data >= week.startStr && t.data <= week.endStr;
+            });
+
+            const div = document.createElement('div');
+            div.className = `week-card ${hasShifts ? 'generated' : 'empty'}`;
+            
+            div.innerHTML = `
+                <div>
+                    <h3>Settimana ${week.start.toLocaleDateString()} - ${week.end.toLocaleDateString()}</h3>
+                    <span style="color: ${hasShifts ? 'green' : 'red'}">
+                        ${hasShifts ? '✅ Pianificata' : '⚠️ Da Pianificare'}
+                    </span>
+                </div>
+                <div>
+                    ${hasShifts 
+                        ? `<button class="btn-primary" onclick="vediTurni('${week.startStr}', '${week.endStr}')">Mostra Calendario</button>`
+                        : `<button class="btn-success" onclick="generaTurni('${week.startStr}')">Genera Turni</button>`
+                    }
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    // 3. Funzioni Azioni
+    function vediTurni(start, end) {
+        const modal = document.getElementById('modalTurni');
+        const tbody = document.getElementById('modalBody');
+        tbody.innerHTML = '';
+        
+        const turniFiltrati = tuttiITurni.filter(t => t.data >= start && t.data <= end);
+        turniFiltrati.sort((a,b) => (a.data + a.oraInizio).localeCompare(b.data + b.oraInizio));
+
+        turniFiltrati.forEach(t => {
+            tbody.innerHTML += `<tr><td>${t.data}</td><td>${t.oraInizio} - ${t.oraFine}</td><td>${t.dipendente.cognome}</td></tr>`;
+        });
+
+        modal.style.display = 'flex';
+    }
+
+    async function generaTurni(lunediDate) {
+        if(!confirm("Vuoi avviare l'algoritmo per questa settimana?")) return;
+        
+        // Chiama l'API del backend esistente
+        const res = await fetch(`/api/turni/genera?data=${lunediDate}`, { method: 'POST' });
+        if(res.ok) {
+            alert("Turni generati con successo!");
+            location.reload(); // Ricarica per vedere il bottone cambiato
+        } else {
+            alert("Errore nella generazione.");
+        }
+    }
+
+    function chiudiModal() {
+        document.getElementById('modalTurni').style.display = 'none';
+    }
+
+    initCalendario();
+</script>
+
+</body>
+</html>
