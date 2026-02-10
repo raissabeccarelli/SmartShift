@@ -1,54 +1,32 @@
 package com.example.smartshift;
 
-import com.example.smartshift.model.Assenza;
-import com.example.smartshift.model.Dipendente;
-import com.example.smartshift.repository.AssenzaRepository;
-import com.example.smartshift.repository.DipendenteRepository;
-
-import java.time.LocalDate;
-
 import com.example.smartshift.model.Dipendente;
 import com.example.smartshift.repository.DipendenteRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
 // Lo usiamo per caricare i dati
 @Component
-public class DataLoader {
+public class DataLoader implements CommandLineRunner{
+    @Autowired
+    private DipendenteRepository dipendenteRepository;
 
-    @Bean
-    CommandLineRunner loadData(DipendenteRepository dipendenteRepository, AssenzaRepository assenzaRepository) {
-        return args -> {
-            // Controlla se il database è vuoto
-            if (dipendenteRepository.count() == 0) {
-                System.out.println("Database vuoto: Caricamento dati di prova...");
-                
-                // Creiamo i dipendenti
-                Dipendente rossi = new Dipendente("Mario", "Rossi", 40, 8);
-                Dipendente verdi = new Dipendente("Luigi", "Verdi", 20, 4);
-                Dipendente bianchi = new Dipendente("Anna", "Bianchi", 30, 6);
-                Dipendente beccarelli = new Dipendente("Raissa", "Beccarelli", 24, 6);
-                Dipendente locatelli = new Dipendente("Giacomo", "Locatelli", 20, 5);
-                Dipendente valceschini = new Dipendente("Marco", "Valceschini", 30, 5);
+    @Override
+    public void run(String... args) throws Exception {
+        // se ci sono già dipendenti nel DB, mi fermo
+        if (dipendenteRepository.count() > 0) {
+            System.out.println("Database già popolato.");
+            return;
+        }
 
-                // Salviamo i dipendenti (Spring restituisce l'oggetto salvato con l'ID vero)
-                rossi = dipendenteRepository.save(rossi);
-                verdi = dipendenteRepository.save(verdi);
-                bianchi = dipendenteRepository.save(bianchi);
-                beccarelli = dipendenteRepository.save(beccarelli);
-                locatelli = dipendenteRepository.save(locatelli);
-                valceschini = dipendenteRepository.save(valceschini);    
+        // se siamo qui il DB è vuoto e quindi carico i dati
+        System.out.println("Database vuoto. Carico dati...");
 
-                // --- AGGIUNGIAMO UN'ASSENZA ---
-                // Mandiamo Rossi in ferie il prossimo Lunedì (o domani, basta che sia nel range)
-                LocalDate domani = LocalDate.now().plusDays(1); 
-                
-                // Assenza: Data, Tipo, Dipendente
-                assenzaRepository.save(new Assenza(domani, "FERIE", rossi));
+        dipendenteRepository.save(new Dipendente("Mario", "Rossi", 40, 8));
+        dipendenteRepository.save(new Dipendente("Luigi", "Verdi", 20, 4)); // Part-time
+        dipendenteRepository.save(new Dipendente("Anna", "Bianchi", 30, 6));
 
-                System.out.println("Dati caricati!");
-            }
-        };
+        System.out.println("Dati inseriti con successo!");
     }
 }

@@ -45,7 +45,7 @@ public class TurnoService {
         Dipendente d = dipendenteRepository.findById(dipendenteId)
                 .orElseThrow(() -> new RuntimeException("Dipendente non trovato!"));
         assenzaRepository.save(new Assenza(data, tipo, d));
-        System.out.println("📝 Nuova assenza registrata per " + d.getCognome() + " il " + data);
+        System.out.println("Nuova assenza registrata per " + d.getCognome() + " il " + data);
     }
 
     // --- GENERATORE DI TURNI ---
@@ -111,7 +111,7 @@ public class TurnoService {
                 }
             }
 
-            // C. Già lavorato oggi? (È qui che si interrompeva il tuo codice)
+            // C. Già lavorato oggi?
             if (!turnoRepository.findByDipendenteAndData(d, data).isEmpty()) continue;
 
             // D. Monte ore settimanale
