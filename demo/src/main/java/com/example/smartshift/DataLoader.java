@@ -23,9 +23,9 @@ public class DataLoader implements CommandLineRunner{
         // se siamo qui il DB è vuoto e quindi carico i dati
         System.out.println("Database vuoto. Carico dati...");
 
-        dipendenteRepository.save(new Dipendente("Mario", "Rossi", 40, 8));
-        dipendenteRepository.save(new Dipendente("Luigi", "Verdi", 20, 4)); // Part-time
-        dipendenteRepository.save(new Dipendente("Anna", "Bianchi", 30, 6));
+        dipendenteRepository.save(new Dipendente("Mario", "Rossi", 40, 8, 26));
+        dipendenteRepository.save(new Dipendente("Luigi", "Verdi", 20, 4, 26)); // Part-time
+        dipendenteRepository.save(new Dipendente("Anna", "Bianchi", 30, 6, 26));
 
         System.out.println("Dati inseriti con successo!");
     }
