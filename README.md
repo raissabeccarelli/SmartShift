@@ -29,12 +29,15 @@ Il progetto ha un **Backend funzionante** e un **Frontend Web** (HTML/JS) già i
 
 ## Prossimi passi
 Queste sono le funzionalità da implementare nelle prossime iterazioni:
-
-1.  **Storico e Versionamento:**
-    * [ ] Salvare i turni raggruppati per "Settimana" (es. settimana 1, settimana 2) per poter navigare tra passato e futuro senza sovrascrivere tutto.
-2.  **UI e Filtri:**
+1.  **UI e Filtri:**
     * [ ] Possibilità di filtrare il calendario per vedere solo i turni di una specifica persona.
-    * [ ] Alert Visivi: Evidenziare in ROSSO nel calendario le fasce che sono rimaste scoperte.
-    * [ ] Modifica manuale dei turni generati (?).
+    * [ ] Modifica manuale dei turni generati (da ricontrollare l'inserimento di un turno di un dipendente assente).
+    * [ ] Migliorie sull'interfaccia della home.
+    * [ ] Ottimizzazione del codice.
+  
+2. **Assenze**
+   * [ ] Mettere per ferie e malattie il range di date da a.
+   * [ ] Togliere la modifica di nome e cognome per i dipendenti.
+   * [ ] Controllo visualizzazione dati calendario.
 
 ---
