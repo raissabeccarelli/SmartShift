@@ -81,6 +81,13 @@ button {
 .btn-success { background: var(--success); color: white; }
 .btn-danger { background: var(--danger); color: white; }
 .btn-sm { padding: 5px 10px; font-size: 0.85em; margin-right: 5px; }
+.btn-warning { 
+    background-color: #ffc107; 
+    color: #212529; /* Testo scuro per contrasto */
+}
+.btn-warning:hover {
+    background-color: #e0a800;
+}
 button:hover { opacity: 0.9; transform: translateY(-1px); }
 
 input, select, textarea {
@@ -110,7 +117,7 @@ input, select, textarea {
 
 /* MODAL (Popups) */
 .modal {
-    display: none; /* Nascosto di base */
+    display: none;
     position: fixed;
     z-index: 1000;
     left: 0; top: 0;
@@ -121,15 +128,109 @@ input, select, textarea {
 }
 .modal-content {
     background-color: white;
-    padding: 30px;
+    padding: 25px;
     border-radius: 10px;
-    width: 500px;
-    max-width: 90%;
+    width: 90%;
+    max-width: 800px;
+    max-height: 85vh;
+    overflow-y: auto;
     position: relative;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
+
 .close {
     position: absolute;
     right: 20px; top: 15px;
     font-size: 24px;
     cursor: pointer;
+    z-index: 10;
+}
+
+/* --- NUOVO STILE: GRIGLIA CALENDARIO --- */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr); /* 7 colonne fisse */
+    gap: 10px;
+    margin-top: 20px;
+    padding-bottom: 10px;
+}
+
+.day-column {
+    background-color: #f1f3f5;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+    display: flex;
+    flex-direction: column;
+    min-height: 300px; /* Altezza minima colonne */
+}
+
+.day-header {
+    background-color: var(--primary);
+    color: white;
+    text-align: center;
+    padding: 10px 5px;
+    font-weight: bold;
+    border-radius: 5px 5px 0 0;
+    font-size: 0.9em;
+    text-transform: capitalize;
+}
+
+.day-body {
+    padding: 8px;
+    flex-grow: 1;
+}
+
+/* Card del singolo turno */
+.shift-card {
+    background: white;
+    border-left: 4px solid var(--success);
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: transform 0.2s;
+}
+
+.shift-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.shift-name {
+    font-weight: bold;
+    font-size: 0.9em;
+    color: var(--dark);
+    margin-bottom: 3px;
+}
+
+.shift-time {
+    font-size: 0.8em;
+    color: #666;
+    background-color: #f8f9fa;
+    display: inline-block;
+    padding: 2px 5px;
+    border-radius: 4px;
+}
+
+.no-shift {
+    text-align: center;
+    color: #adb5bd;
+    font-size: 1.5em;
+    margin-top: 20px;
+}
+
+/* RESPONSIVE: Su mobile diventa una colonna unica */
+@media (max-width: 900px) {
+    .calendar-grid {
+        grid-template-columns: repeat(2, 1fr); /* 2 colonne su tablet */
+    }
+}
+
+@media (max-width: 600px) {
+    .calendar-grid {
+        grid-template-columns: 1fr; /* 1 colonna su mobile */
+    }
+    .day-column {
+        min-height: auto;
+    }
 }

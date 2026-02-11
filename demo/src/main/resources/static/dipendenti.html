@@ -153,18 +153,34 @@
         document.getElementById('modalAssenze').style.display = 'flex';
     }
 
-    async function salvaAssenza() {
+   async function salvaAssenza() {
         const id = document.getElementById('assenzeDipId').value;
         const data = document.getElementById('dataAssenza').value;
         const tipo = document.getElementById('tipoAssenza').value;
-        // const motivazione = document.getElementById('motivazione').value; // Se il backend la accetta, aggiungila all'URL o body
 
         if(!data) return alert("Inserisci la data");
 
-        // Chiamata esistente
-        await fetch(`/api/turni/assenza?dipendenteId=${id}&data=${data}&tipo=${tipo}`, { method: 'POST' });
-        alert("Assenza registrata");
-        chiudiModals();
+        // INVIO DEI DATI IN FORMATO JSON (Più robusto)
+        const res = await fetch('/api/turni/assenza', { 
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                dipendenteId: id, 
+                data: data, 
+                tipo: tipo 
+            })
+        });
+
+        if (res.ok) {
+            alert("Assenza registrata con successo!");
+            chiudiModals();
+            // Ricarica la pagina per aggiornare eventuali visualizzazioni
+            location.reload(); 
+        } else {
+            alert("Errore nel salvataggio dell'assenza.");
+        }
     }
 
     function elimina(id) {
