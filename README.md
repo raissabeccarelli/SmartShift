@@ -30,14 +30,12 @@ Il progetto ha un **Backend funzionante** e un **Frontend Web** (HTML/JS) già i
 ## Prossimi passi
 Queste sono le funzionalità da implementare nelle prossime iterazioni:
 1.  **UI e Filtri:**
-    * [ ] Possibilità di filtrare il calendario per vedere solo i turni di una specifica persona.
-    * [ ] Modifica manuale dei turni generati (da ricontrollare l'inserimento di un turno di un dipendente assente).
     * [ ] Migliorie sull'interfaccia della home.
     * [ ] Ottimizzazione del codice.
   
 2. **Assenze**
    * [ ] Mettere per ferie e malattie il range di date da a.
-   * [ ] Togliere la modifica di nome e cognome per i dipendenti.
    * [ ] Controllo visualizzazione dati calendario.
+   * [ ] Sistemare il CRUD
 
 ---
