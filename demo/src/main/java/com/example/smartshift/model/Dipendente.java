@@ -32,17 +32,11 @@ public class Dipendente {
     @Column(name = "ferie_residue")
     private int ferieResidue = 26;
 
-    // Relazione: un dipendente ha molte assenze
-    // mappedBy = "dipendente" indica che la chiave esterna è nell'altra tabella
     @OneToMany(mappedBy = "dipendente", cascade = CascadeType.ALL)
     private List<Assenza> assenze = new ArrayList<>();
 
-    // --- COSTRUTTORI ---
-    
-    // Costruttore vuoto
     public Dipendente() {}
 
-    // Costruttore completo
     public Dipendente(String nome, String cognome, int oreSettimanaliContratto, int oreGiornaliereMax, int ferieResidue) {
         this.nome = nome;
         this.cognome = cognome;
@@ -51,26 +45,18 @@ public class Dipendente {
         this.ferieResidue = ferieResidue;
     }
 
-    // --- GETTER E SETTER ---
-
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-
     public String getNome() { return nome; }
     public void setNome(String nome) { this.nome = nome; }
-
     public String getCognome() { return cognome; }
     public void setCognome(String cognome) { this.cognome = cognome; }
-
     public int getOreSettimanaliContratto() { return oreSettimanaliContratto; }
     public void setOreSettimanaliContratto(int oreSettimanaliContratto) { this.oreSettimanaliContratto = oreSettimanaliContratto; }
-
     public int getOreGiornaliereMax() { return oreGiornaliereMax; }
     public void setOreGiornaliereMax(int oreGiornaliereMax) { this.oreGiornaliereMax = oreGiornaliereMax; }
-
     public int getFerieResidue() { return ferieResidue; }
     public void setFerieResidue(int ferieResidue) { this.ferieResidue = ferieResidue; }
-
     public List<Assenza> getAssenze() { return assenze; }
     public void setAssenze(List<Assenza> assenze) { this.assenze = assenze; }
 }

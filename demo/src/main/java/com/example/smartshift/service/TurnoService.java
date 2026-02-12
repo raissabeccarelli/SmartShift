@@ -27,13 +27,7 @@ public class TurnoService {
     @Autowired private TurnoRepository turnoRepository;
     @Autowired private AssenzaRepository assenzaRepository;
 
-    // --- CONFIGURAZIONE SLOT CENTRALIZZATA ---
-    private static final List<ConfigurazioneSlot> SLOTS_CONFIG = List.of(
-        new ConfigurazioneSlot(6, 12, 3),   // Mattina (06-12): Min 3 persone
-        new ConfigurazioneSlot(12, 18, 4),  // Pomeriggio (12-18): Min 4 persone
-        new ConfigurazioneSlot(18, 23, 5)  // Sera (18-23): Min 5 persone
-    );
-
+    // Classe interna per definire le fasce orarie
     private static class ConfigurazioneSlot {
         LocalTime inizio;
         LocalTime fine;
@@ -46,12 +40,22 @@ public class TurnoService {
         }
     }
 
-    // Metodo per inviare la configurazione al Frontend
+    // --- CONFIGURAZIONE DINAMICA ---
+    // Non è più "static final", ma una lista modificabile che ricorda l'ultima generazione fatta.
+    // Parte con dei valori di default per quando avvii l'app la prima volta.
+    private List<ConfigurazioneSlot> currentConfig = new ArrayList<>(List.of(
+        new ConfigurazioneSlot(6, 12, 3), 
+        new ConfigurazioneSlot(12, 18, 4), 
+        new ConfigurazioneSlot(18, 23, 5) 
+    ));
+
+    // Questo metodo viene chiamato dal Frontend per disegnare i box tratteggiati
     public List<Map<String, Object>> getConfigurazioneSlot() {
         List<Map<String, Object>> result = new ArrayList<>();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
 
-        for (ConfigurazioneSlot slot : SLOTS_CONFIG) {
+        // Leggiamo dalla configurazione CORRENTE (aggiornata), non da quella di default fissa
+        for (ConfigurazioneSlot slot : currentConfig) {
             result.add(Map.of(
                 "inizio", slot.inizio.format(formatter),
                 "fine", slot.fine.format(formatter),
@@ -90,21 +94,33 @@ public class TurnoService {
         }
     }
 
-    // --- GENERATORE TURNI ---
+    // --- GENERATORE TURNI DINAMICO ---
     @Transactional
-    public void generaTurniPerSettimana(LocalDate dataInizio) {
+    public void generaTurniPerSettimana(LocalDate dataInizio, int minMattina, int minPomeriggio, int minSera) {
         LocalDate dataFine = dataInizio.plusDays(6);
 
-        // 1. Pulizia turni esistenti
-        turnoRepository.deleteByDataBetween(dataInizio, dataFine);
+        // 1. PULIZIA FORZATA
+        turnoRepository.deleteTurniInRange(dataInizio, dataFine);
+        turnoRepository.flush(); // Fondamentale per evitare letture "sporche" dalla cache
 
         List<Dipendente> dipendenti = dipendenteRepository.findAll();
 
-        // 2. Ciclo giorni
+        // 2. Creiamo la nuova configurazione richiesta dall'utente
+        List<ConfigurazioneSlot> slotsDinamici = List.of(
+            new ConfigurazioneSlot(6, 12, minMattina),
+            new ConfigurazioneSlot(12, 18, minPomeriggio),
+            new ConfigurazioneSlot(18, 23, minSera)
+        );
+
+        // --- PUNTO CHIAVE: AGGIORNIAMO LA MEMORIA DEL SISTEMA ---
+        // Salviamo questa configurazione in 'currentConfig' così il frontend,
+        // al refresh, saprà che i nuovi minimi sono questi e non darà errore rosso.
+        this.currentConfig = new ArrayList<>(slotsDinamici);
+
+        // 3. Generazione vera e propria
         for (LocalDate data = dataInizio; !data.isAfter(dataFine); data = data.plusDays(1)) {
-            // Usiamo la lista statica SLOTS_CONFIG
-            for (ConfigurazioneSlot slot : SLOTS_CONFIG) {
-                Collections.shuffle(dipendenti);
+            for (ConfigurazioneSlot slot : slotsDinamici) {
+                Collections.shuffle(dipendenti); // Randomizza per equità
                 assegnaTurnoMigliore(data, slot.inizio, slot.fine, slot.minDipendenti, dipendenti);
             }
         }
@@ -114,7 +130,7 @@ public class TurnoService {
         LocalDate inizioSettimana = data.with(java.time.DayOfWeek.MONDAY);
         LocalDate fineSettimana = data.with(java.time.DayOfWeek.SUNDAY);
 
-        // Durata slot
+        // Calcolo durata slot
         int durataSlot = fine.getHour() - inizio.getHour();
         if (durataSlot < 0) durataSlot += 24; 
         if (durataSlot == 0 && fine.equals(LocalTime.of(0,0))) durataSlot = 24 - inizio.getHour();
@@ -125,21 +141,23 @@ public class TurnoService {
         for (Dipendente d : dipendenti) {
             if (personeAssegnate >= numeroMinimo) break; 
 
-            // Controlli validità (Assenze, Riposo, ecc.)
+            // 1. Controllo Assenze
             if (!assenzaRepository.findByDipendenteAndData(d, data).isEmpty()) continue;
             
-            // Riposo 11 ore
+            // 2. Controllo Riposo 11 ore
             List<Turno> turniRecenti = turnoRepository.findByDipendenteAndDataBetweenOrderByDataDescOraFineDesc(d, data.minusDays(1), data);
             if (!turniRecenti.isEmpty()) {
                 Turno ultimo = turniRecenti.get(0);
                 LocalDateTime fineUltimo = LocalDateTime.of(ultimo.getData(), ultimo.getOraFine());
                 if (ultimo.getOraFine().isBefore(ultimo.getOraInizio())) fineUltimo = fineUltimo.plusDays(1);
+                
                 if (java.time.temporal.ChronoUnit.HOURS.between(fineUltimo, startNuovoTurno) < 11) continue;
             }
 
+            // 3. Controllo Sovrapposizioni
             if (!turnoRepository.findByDipendenteAndData(d, data).isEmpty()) continue;
 
-            // Monte ore settimanale
+            // 4. Controllo Monte Ore Settimanale
             List<Turno> turniSettimana = turnoRepository.findByDipendenteAndDataBetween(d, inizioSettimana, fineSettimana);
             int oreGiaLavorate = 0;
             for (Turno t : turniSettimana) {
@@ -153,6 +171,7 @@ public class TurnoService {
 
             if (oreDaAssegnare <= 0) continue; 
             
+            // Creazione e Salvataggio
             LocalTime nuovaFine = inizio.plusHours(oreDaAssegnare);
             Turno nuovoTurno = new Turno(data, inizio, nuovaFine, d);
             turnoRepository.save(nuovoTurno);

@@ -1,10 +1,11 @@
 package com.example.smartshift.repository;
 
-import com.example.smartshift.model.Dipendente;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import com.example.smartshift.model.Dipendente;
 
 @Repository
 public interface DipendenteRepository extends JpaRepository<Dipendente, Long> {

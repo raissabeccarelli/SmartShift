@@ -7,13 +7,13 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.smartshift.model.Assenza;
@@ -33,23 +33,64 @@ public class TurnoController {
     @Autowired private DipendenteRepository dipendenteRepository;
     @Autowired private AssenzaRepository assenzaRepository;
 
-    // --- NUOVO ENDPOINT: Configurazione Slot ---
-    // Serve al frontend per calcolare i buchi di organico
+    // --- CONFIGURAZIONE SLOT (Per il Frontend) ---
     @GetMapping("/config-slot")
     public ResponseEntity<?> getConfigurazioneSlot() {
         return ResponseEntity.ok(turnoService.getConfigurazioneSlot());
     }
 
-    // --- 1. GENERAZIONE ---
+    // --- 1. GENERAZIONE (AGGIORNATO E CORRETTO) ---
+    
+    // DTO aggiornato con Getter e Setter per garantire che Spring legga i dati
+    public static class GenerazioneRequest {
+        private String data;
+        private int minMattina;
+        private int minPomeriggio;
+        private int minSera;
+
+        // Getter e Setter sono FONDAMENTALI per Spring Boot
+        public String getData() { return data; }
+        public void setData(String data) { this.data = data; }
+
+        public int getMinMattina() { return minMattina; }
+        public void setMinMattina(int minMattina) { this.minMattina = minMattina; }
+
+        public int getMinPomeriggio() { return minPomeriggio; }
+        public void setMinPomeriggio(int minPomeriggio) { this.minPomeriggio = minPomeriggio; }
+
+        public int getMinSera() { return minSera; }
+        public void setMinSera(int minSera) { this.minSera = minSera; }
+    }
+
     @PostMapping("/genera")
-    public ResponseEntity<?> generaTurni(@RequestParam(required = false) String data) {
+    public ResponseEntity<?> generaTurni(@RequestBody GenerazioneRequest req) {
         try {
-            LocalDate start = (data != null) ? LocalDate.parse(data) : LocalDate.now();
+            // --- STAMPE DI DEBUG (Guarda la console di Spring!) ---
+            System.out.println(">>> RICHIESTA GENERAZIONE RICEVUTA <<<");
+            System.out.println("Data: " + req.getData());
+            System.out.println("Mattina richiesti: " + req.getMinMattina());
+            System.out.println("Pomeriggio richiesti: " + req.getMinPomeriggio());
+            System.out.println("Sera richiesti: " + req.getMinSera());
+            // -----------------------------------------------------
+
+            if (req.getData() == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Data mancante"));
+            }
+
+            LocalDate start = LocalDate.parse(req.getData());
             LocalDate lunedi = start.with(java.time.DayOfWeek.MONDAY);
             
-            turnoService.generaTurniPerSettimana(lunedi);
+            // Chiamata al Service
+            turnoService.generaTurniPerSettimana(
+                lunedi, 
+                req.getMinMattina(), 
+                req.getMinPomeriggio(), 
+                req.getMinSera()
+            );
+            
             return ResponseEntity.ok(Map.of("message", "Turni generati per la settimana del " + lunedi));
         } catch (Exception e) {
+            e.printStackTrace(); 
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
@@ -130,5 +171,27 @@ public class TurnoController {
     @PostMapping("/dipendenti")
     public Dipendente aggiungiDipendente(@RequestBody Dipendente nuovoDipendente) {
         return dipendenteRepository.save(nuovoDipendente);
+    }
+
+    // 6. CANCELLAZIONE DIPENDENTE
+    @Transactional
+    @DeleteMapping("/dipendenti/{id}")
+    public ResponseEntity<?> eliminaDipendente(@PathVariable Long id) {
+        try {
+            // 1. Cerchiamo il dipendente
+            Dipendente d = dipendenteRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Dipendente non trovato"));
+
+            // 2. Eliminiamo prima i suoi turni manualmente per evitare conflitti di Foreign Key
+            // Supponendo che tu abbia un metodo nel repository dei turni o lo faccia tramite query
+            turnoRepository.deleteByDipendente(d);
+
+            // 3. Eliminiamo il dipendente (le assenze verranno eliminate dal CascadeType.ALL)
+            dipendenteRepository.delete(d);
+
+            return ResponseEntity.ok().body(Map.of("message", "Eliminato con successo"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
     }
 }

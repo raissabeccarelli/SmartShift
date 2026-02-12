@@ -4,8 +4,10 @@ import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying; // <--- IMPORTANTE
-import org.springframework.stereotype.Repository; // <--- IMPORTANTE
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.smartshift.model.Dipendente;
@@ -24,4 +26,10 @@ public interface TurnoRepository extends JpaRepository<Turno, Long> {
     @Modifying // Dice a Spring: "Questa query modifica/cancella dati"
     @Transactional // Dice a Spring: "Gestisci questa operazione come una transazione sicura"
     void deleteByDataBetween(LocalDate dataInizio, LocalDate dataFine);
+
+    @Modifying
+    @Query("DELETE FROM Turno t WHERE t.data >= :dataInizio AND t.data <= :dataFine")
+    void deleteTurniInRange(@Param("dataInizio") LocalDate dataInizio, @Param("dataFine") LocalDate dataFine);
+
+    void deleteByDipendente(Dipendente dipendente);
 }

@@ -1,8 +1,15 @@
 package com.example.smartshift.model;
 
-import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "turni")
@@ -16,8 +23,6 @@ public class Turno {
     private LocalTime oraInizio;
     private LocalTime oraFine;
 
-    // ⚠️ QUI NON CI DEVE ESSERE @JsonIgnore !!!
-    // Vogliamo vedere il dipendente nel JSON del turno
     @ManyToOne
     @JoinColumn(name = "dipendente_id")
     private Dipendente dipendente;

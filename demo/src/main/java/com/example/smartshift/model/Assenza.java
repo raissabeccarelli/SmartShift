@@ -1,9 +1,16 @@
 package com.example.smartshift.model;
 
-import jakarta.persistence.*;
 import java.time.LocalDate;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "assenze")
@@ -49,4 +56,8 @@ public class Assenza {
 
     public String getMotivazione() { return motivazione; }
     public void setMotivazione(String motivazione) { this.motivazione = motivazione; }
+
+    public Long getDipendenteId() {
+    return (dipendente != null) ? dipendente.getId() : null;
+}
 }

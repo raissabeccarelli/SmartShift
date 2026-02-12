@@ -43,9 +43,9 @@
         <label>Cognome</label>
         <input type="text" id="cognome">
         <label>Ore Settimanali</label>
-        <input type="number" id="oreSett">
+        <input type="number" id="oreSett" min="0" max="40">
         <label>Max Ore Giornaliere</label>
-        <input type="number" id="oreMax">
+        <input type="number" id="oreMax" min="0" max="8">
         
         <button class="btn-primary" onclick="salvaDipendente()">Salva</button>
     </div>
@@ -103,46 +103,113 @@
     function apriModalCrea() {
         document.getElementById('modalTitleDip').innerText = "Nuovo Dipendente";
         document.getElementById('editId').value = "";
-        document.getElementById('nome').value = "";
-        document.getElementById('cognome').value = "";
+        
+        const inputNome = document.getElementById('nome');
+        const inputCognome = document.getElementById('cognome');
+
+        // Puliamo i valori
+        inputNome.value = "";
+        inputCognome.value = "";
         document.getElementById('oreSett').value = "";
         document.getElementById('oreMax').value = "";
+
+        // --- SBLOCCO MODIFICHE (Reset) ---
+        // Se vengo da una modifica, devo riabilitare la scrittura
+        inputNome.readOnly = false;
+        inputCognome.readOnly = false;
+        
+        // Ripristino il colore bianco
+        inputNome.style.backgroundColor = "white";
+        inputCognome.style.backgroundColor = "white";
+        inputNome.style.cursor = "text";
+        inputCognome.style.cursor = "text";
+
         document.getElementById('modalDipendente').style.display = 'flex';
     }
 
     function apriModifica(d) {
         document.getElementById('modalTitleDip').innerText = "Modifica Dipendente";
         document.getElementById('editId').value = d.id;
-        document.getElementById('nome').value = d.nome;
-        document.getElementById('cognome').value = d.cognome;
+        
+        // Riempiamo i campi
+        const inputNome = document.getElementById('nome');
+        const inputCognome = document.getElementById('cognome');
+        
+        inputNome.value = d.nome;
+        inputCognome.value = d.cognome;
         document.getElementById('oreSett').value = d.oreSettimanaliContratto;
         document.getElementById('oreMax').value = d.oreGiornaliereMax;
+
+        // --- BLOCCO MODIFICHE ANAGRAFICA ---
+        // Impostiamo sola lettura
+        inputNome.readOnly = true;
+        inputCognome.readOnly = true;
+        
+        // Cambiamo colore per far capire che sono bloccati (grigino)
+        inputNome.style.backgroundColor = "#e9ecef";
+        inputCognome.style.backgroundColor = "#e9ecef";
+        inputNome.style.cursor = "not-allowed";
+        inputCognome.style.cursor = "not-allowed";
+
         document.getElementById('modalDipendente').style.display = 'flex';
     }
 
     async function salvaDipendente() {
         const id = document.getElementById('editId').value;
+        const nome = document.getElementById('nome').value;
+        const cognome = document.getElementById('cognome').value;
+        
+        // Convertiamo i valori in numeri
+        const oreSett = Number(document.getElementById('oreSett').value);
+        const oreMax = Number(document.getElementById('oreMax').value);
+
+        // --- INIZIO CONTROLLI DI VALIDITÀ ---
+
+        // 1. Controllo campi vuoti
+        if (!nome || !cognome || document.getElementById('oreSett').value === "" || document.getElementById('oreMax').value === "") {
+            alert("Compila tutti i campi prima di salvare.");
+            return; 
+        }
+
+        // 2. Controllo Ore Settimanali (No negativi, Max 40)
+        if (oreSett < 0 || oreSett > 40) {
+            alert("ERRORE: Le ore settimanali devono essere comprese tra 0 e 40!");
+            return; 
+        }
+
+        // 3. Controllo Ore Giornaliere (No negativi, Max 8)
+        if (oreMax < 0 || oreMax > 8) {
+            alert("ERRORE: Le ore giornaliere devono essere comprese tra 0 e 8!");
+            return; 
+        }
+
+        // --- FINE CONTROLLI ---
+
         const dip = {
-            id: id ? id : null, // Se c'è ID è modifica, altrimenti nuovo (il backend deve gestirlo)
-            nome: document.getElementById('nome').value,
-            cognome: document.getElementById('cognome').value,
-            oreSettimanaliContratto: document.getElementById('oreSett').value,
-            oreGiornaliereMax: document.getElementById('oreMax').value
+            id: id ? id : null, 
+            nome: nome,
+            cognome: cognome,
+            oreSettimanaliContratto: oreSett,
+            oreGiornaliereMax: oreMax
         };
 
-        // NOTA: Assumo che la tua API usi POST anche per update o abbia logica interna
-        // Se hai PUT, cambia method in base alla presenza dell'ID
-        const res = await fetch('/api/turni/dipendenti', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(dip)
-        });
+        try {
+            const res = await fetch('/api/turni/dipendenti', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(dip)
+            });
 
-        if(res.ok) {
-            chiudiModals();
-            caricaDipendenti();
-        } else {
-            alert("Errore salvataggio");
+            if(res.ok) {
+                chiudiModals();
+                caricaDipendenti();
+                // alert("Dipendente salvato con successo!"); // Togli il commento se vuoi la conferma
+            } else {
+                alert("Errore durante il salvataggio.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Errore di connessione al server.");
         }
     }
 
@@ -183,13 +250,23 @@
         }
     }
 
-    function elimina(id) {
-        if(confirm("Sei sicuro di voler eliminare questo dipendente?")) {
-            // NOTA: Aggiungi endpoint DELETE se esiste, altrimenti:
-            alert("Implementa endpoint DELETE nel backend per id: " + id);
-            // await fetch('/api/turni/dipendenti/'+id, { method: 'DELETE' });
-            // caricaDipendenti();
+    async function elimina(id) {
+    if(confirm("Sei sicuro di voler eliminare questo dipendente? I suoi turni e assenze verranno rimossi.")) {
+        try {
+            const res = await fetch('/api/turni/dipendenti/' + id, { 
+                method: 'DELETE' 
+            });
+
+            if(res.ok) {
+                caricaDipendenti(); // Ricarica la tabella
+            } else {
+                alert("Errore durante l'eliminazione.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Errore di connessione.");
         }
+    }
     }
 
     function chiudiModals() {
