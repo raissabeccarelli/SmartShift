@@ -162,6 +162,17 @@ public class TurnoController {
         return assenzaRepository.findAll();
     }
 
+    // AGGIUNGI QUESTO METODO PER ABILITARE L'ELIMINAZIONE
+    @DeleteMapping("/assenza/{id}")
+    public ResponseEntity<?> eliminaAssenza(@PathVariable Long id) {
+        if (assenzaRepository.existsById(id)) {
+            assenzaRepository.deleteById(id);
+            return ResponseEntity.ok(Map.of("message", "Assenza eliminata con successo"));
+        } else {
+            return ResponseEntity.status(404).body(Map.of("error", "Assenza non trovata"));
+        }
+    }
+
     // --- 5. GESTIONE DIPENDENTI ---
     @GetMapping("/dipendenti")
     public List<Dipendente> getDipendenti() {

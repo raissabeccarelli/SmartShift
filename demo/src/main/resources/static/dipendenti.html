@@ -4,6 +4,28 @@
     <meta charset="UTF-8">
     <title>SmartShift - Dipendenti</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Stili aggiuntivi per le tabelle interne e badge */
+        .btn-info {
+            background-color: #17a2b8; color: white;
+        }
+        .btn-info:hover {
+            background-color: #138496;
+        }
+        .stat-box {
+            background: #e3f2fd; padding: 10px; border-radius: 6px; 
+            display: flex; justify-content: space-around; margin-top: 10px;
+        }
+        .stat-item { text-align: center; }
+        .stat-label { display:block; font-size: 0.8em; color: #555; }
+        .stat-value { font-size: 1.2em; font-weight: bold; }
+        
+        /* Scrollbar per lo storico */
+        .history-container {
+            max-height: 250px; overflow-y: auto; 
+            border: 1px solid #eee; border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
 
@@ -52,54 +74,96 @@
 </div>
 
 <div id="modalAssenze" class="modal">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 650px;">
         <span class="close" onclick="chiudiModals()">&times;</span>
-        <h2>Inserisci Assenza</h2>
-        <p>Dipendente: <strong id="assenzeDipName"></strong></p>
+        
+        <div style="border-bottom: 1px solid #ddd; margin-bottom: 15px; padding-bottom: 10px;">
+            <h2 style="margin: 0;">Gestione Assenze</h2>
+            <p style="color: #666; margin: 5px 0;">Dipendente: <strong id="assenzeDipName"></strong></p>
+            
+            <div class="stat-box">
+                <div class="stat-item">
+                    <span class="stat-label">Ferie Godute</span>
+                    <strong id="statFerieGodute" class="stat-value" style="color: #0288d1;">0</strong>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Ferie Residue (su 26gg)</span>
+                    <strong id="statFerieResidue" class="stat-value" style="color: #2e7d32;">0</strong>
+                </div>
+            </div>
+        </div>
+
         <input type="hidden" id="assenzeDipId">
 
-        <label>Data</label>
-        <input type="date" id="dataAssenza">
-        
-        <label>Tipo Assenza</label>
-        <select id="tipoAssenza">
-            <option value="FERIE">Ferie</option>
-            <option value="MALATTIA">Malattia</option>
-            <option value="PERMESSO">Permesso</option>
-        </select>
+        <h4 style="margin-bottom: 10px;">➕ Nuova Assenza</h4>
+        <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <label style="font-size: 0.85em;">Data</label>
+                    <input type="date" id="dataAssenza" style="width: 100%; padding: 5px;">
+                </div>
+                <div style="flex: 1;">
+                    <label style="font-size: 0.85em;">Tipo</label>
+                    <select id="tipoAssenza" style="width: 100%; padding: 6px;">
+                        <option value="FERIE">Ferie 🏖️</option>
+                        <option value="MALATTIA">Malattia 🤒</option>
+                        <option value="PERMESSO">Permesso ⏱️</option>
+                    </select>
+                </div>
+            </div>
+            <textarea id="motivazione" rows="1" placeholder="Note opzionali..." style="width: 100%; margin-top: 10px; font-size: 0.9em;"></textarea>
+            <button class="btn-primary" onclick="salvaAssenza()" style="width: 100%; margin-top: 10px;">Registra Assenza</button>
+        </div>
 
-        <label>Motivazione (Opzionale)</label>
-        <textarea id="motivazione" rows="3"></textarea>
-
-        <button class="btn-primary" onclick="salvaAssenza()">Registra Assenza</button>
+        <h4 style="margin-top: 20px; margin-bottom: 10px;">📜 Storico Assenze</h4>
+        <div class="history-container">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                <thead style="background: #f1f1f1; position: sticky; top: 0;">
+                    <tr>
+                        <th style="padding: 8px; text-align: left;">Data</th>
+                        <th style="padding: 8px; text-align: left;">Tipo</th>
+                        <th style="padding: 8px; text-align: left;">Note</th>
+                        <th style="padding: 8px; text-align: center;">Azioni</th>
+                    </tr>
+                </thead>
+                <tbody id="listaAssenzeStorico">
+                    </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <script>
-    // --- GESTIONE LISTA ---
-    async function caricaDipendenti() {
-        const res = await fetch('/api/turni/dipendenti');
-        const list = await res.json();
-        const tbody = document.getElementById('listaDipendenti');
-        tbody.innerHTML = '';
+    const FERIE_ANNUALI_STANDARD = 26; // Modifica questo numero se necessario
 
-        list.forEach(d => {
-            tbody.innerHTML += `
-                <tr>
-                    <td>${d.nome}</td>
-                    <td>${d.cognome}</td>
-                    <td>${d.oreSettimanaliContratto}h</td>
-                    <td>
-                        <button class="btn-sm btn-primary" onclick='apriModifica(${JSON.stringify(d)})'>Modifica</button>
-                        <button class="btn-sm btn-secondary" onclick="apriAssenze(${d.id}, '${d.cognome}')">Assenze</button>
-                        <button class="btn-sm btn-danger" onclick="elimina(${d.id})">Elimina</button>
-                    </td>
-                </tr>
-            `;
-        });
+    // --- GESTIONE LISTA DIPENDENTI ---
+    async function caricaDipendenti() {
+        try {
+            const res = await fetch('/api/turni/dipendenti');
+            const list = await res.json();
+            const tbody = document.getElementById('listaDipendenti');
+            tbody.innerHTML = '';
+
+            list.forEach(d => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${d.nome}</td>
+                        <td>${d.cognome}</td>
+                        <td>${d.oreSettimanaliContratto}h</td>
+                        <td>
+                            <button class="btn-sm btn-primary" onclick='apriModifica(${JSON.stringify(d)})'>Modifica</button>
+                            <button class="btn-sm btn-info" onclick="apriAssenze(${d.id}, '${d.nome} ${d.cognome}')">Gestisci Assenze</button>
+                            <button class="btn-sm btn-danger" onclick="elimina(${d.id})">Elimina</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        } catch (e) {
+            console.error("Errore caricamento dipendenti", e);
+        }
     }
 
-    // --- LOGICA MODIFICA / CREAZIONE ---
+    // --- LOGICA MODALE DIPENDENTE (CREA/MODIFICA) ---
     function apriModalCrea() {
         document.getElementById('modalTitleDip').innerText = "Nuovo Dipendente";
         document.getElementById('editId').value = "";
@@ -107,22 +171,14 @@
         const inputNome = document.getElementById('nome');
         const inputCognome = document.getElementById('cognome');
 
-        // Puliamo i valori
-        inputNome.value = "";
-        inputCognome.value = "";
+        inputNome.value = ""; inputCognome.value = "";
         document.getElementById('oreSett').value = "";
         document.getElementById('oreMax').value = "";
 
-        // --- SBLOCCO MODIFICHE (Reset) ---
-        // Se vengo da una modifica, devo riabilitare la scrittura
-        inputNome.readOnly = false;
-        inputCognome.readOnly = false;
-        
-        // Ripristino il colore bianco
-        inputNome.style.backgroundColor = "white";
-        inputCognome.style.backgroundColor = "white";
-        inputNome.style.cursor = "text";
-        inputCognome.style.cursor = "text";
+        // Sblocco e stile reset
+        inputNome.readOnly = false; inputCognome.readOnly = false;
+        inputNome.style.backgroundColor = "white"; inputCognome.style.backgroundColor = "white";
+        inputNome.style.cursor = "text"; inputCognome.style.cursor = "text";
 
         document.getElementById('modalDipendente').style.display = 'flex';
     }
@@ -131,7 +187,6 @@
         document.getElementById('modalTitleDip').innerText = "Modifica Dipendente";
         document.getElementById('editId').value = d.id;
         
-        // Riempiamo i campi
         const inputNome = document.getElementById('nome');
         const inputCognome = document.getElementById('cognome');
         
@@ -140,16 +195,10 @@
         document.getElementById('oreSett').value = d.oreSettimanaliContratto;
         document.getElementById('oreMax').value = d.oreGiornaliereMax;
 
-        // --- BLOCCO MODIFICHE ANAGRAFICA ---
-        // Impostiamo sola lettura
-        inputNome.readOnly = true;
-        inputCognome.readOnly = true;
-        
-        // Cambiamo colore per far capire che sono bloccati (grigino)
-        inputNome.style.backgroundColor = "#e9ecef";
-        inputCognome.style.backgroundColor = "#e9ecef";
-        inputNome.style.cursor = "not-allowed";
-        inputCognome.style.cursor = "not-allowed";
+        // Blocco anagrafica
+        inputNome.readOnly = true; inputCognome.readOnly = true;
+        inputNome.style.backgroundColor = "#e9ecef"; inputCognome.style.backgroundColor = "#e9ecef";
+        inputNome.style.cursor = "not-allowed"; inputCognome.style.cursor = "not-allowed";
 
         document.getElementById('modalDipendente').style.display = 'flex';
     }
@@ -158,107 +207,151 @@
         const id = document.getElementById('editId').value;
         const nome = document.getElementById('nome').value;
         const cognome = document.getElementById('cognome').value;
-        
-        // Convertiamo i valori in numeri
         const oreSett = Number(document.getElementById('oreSett').value);
         const oreMax = Number(document.getElementById('oreMax').value);
 
-        // --- INIZIO CONTROLLI DI VALIDITÀ ---
-
-        // 1. Controllo campi vuoti
         if (!nome || !cognome || document.getElementById('oreSett').value === "" || document.getElementById('oreMax').value === "") {
-            alert("Compila tutti i campi prima di salvare.");
-            return; 
+            alert("Compila tutti i campi prima di salvare."); return; 
         }
+        if (oreSett < 0 || oreSett > 40) { alert("Ore settimanali tra 0 e 40!"); return; }
+        if (oreMax < 0 || oreMax > 8) { alert("Ore giornaliere tra 0 e 8!"); return; }
 
-        // 2. Controllo Ore Settimanali (No negativi, Max 40)
-        if (oreSett < 0 || oreSett > 40) {
-            alert("ERRORE: Le ore settimanali devono essere comprese tra 0 e 40!");
-            return; 
-        }
-
-        // 3. Controllo Ore Giornaliere (No negativi, Max 8)
-        if (oreMax < 0 || oreMax > 8) {
-            alert("ERRORE: Le ore giornaliere devono essere comprese tra 0 e 8!");
-            return; 
-        }
-
-        // --- FINE CONTROLLI ---
-
-        const dip = {
-            id: id ? id : null, 
-            nome: nome,
-            cognome: cognome,
-            oreSettimanaliContratto: oreSett,
-            oreGiornaliereMax: oreMax
-        };
+        const dip = { id: id ? id : null, nome, cognome, oreSettimanaliContratto: oreSett, oreGiornaliereMax: oreMax };
 
         try {
             const res = await fetch('/api/turni/dipendenti', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(dip)
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dip)
             });
-
-            if(res.ok) {
-                chiudiModals();
-                caricaDipendenti();
-                // alert("Dipendente salvato con successo!"); // Togli il commento se vuoi la conferma
-            } else {
-                alert("Errore durante il salvataggio.");
-            }
-        } catch (e) {
-            console.error(e);
-            alert("Errore di connessione al server.");
-        }
+            if(res.ok) { chiudiModals(); caricaDipendenti(); } 
+            else { alert("Errore salvataggio."); }
+        } catch (e) { alert("Errore connessione."); }
     }
 
-    // --- LOGICA ASSENZE ---
-    function apriAssenze(id, cognome) {
+    // --- LOGICA GESTIONE ASSENZE (NUOVA) ---
+    async function apriAssenze(id, nomeCompleto) {
         document.getElementById('assenzeDipId').value = id;
-        document.getElementById('assenzeDipName').innerText = cognome;
+        document.getElementById('assenzeDipName').innerText = nomeCompleto;
+        
+        // Reset campi input
+        document.getElementById('dataAssenza').value = "";
+        document.getElementById('motivazione').value = "";
+        document.getElementById('tipoAssenza').value = "FERIE";
+
+        // Caricamento dati
+        await caricaAssenzeDipendente(id);
         document.getElementById('modalAssenze').style.display = 'flex';
     }
 
-   async function salvaAssenza() {
-        const id = document.getElementById('assenzeDipId').value;
-        const data = document.getElementById('dataAssenza').value;
-        const tipo = document.getElementById('tipoAssenza').value;
+    async function caricaAssenzeDipendente(dipId) {
+        const tbody = document.getElementById('listaAssenzeStorico');
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px;">Caricamento...</td></tr>';
 
-        if(!data) return alert("Inserisci la data");
+        try {
+            // Fetch di tutte le assenze (in un'app reale l'API dovrebbe filtrare lato server, qui filtriamo lato client)
+            const res = await fetch('/api/turni/assenze');
+            const tutteAssenze = await res.json();
 
-        // INVIO DEI DATI IN FORMATO JSON (Più robusto)
-        const res = await fetch('/api/turni/assenza', { 
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ 
-                dipendenteId: id, 
-                data: data, 
-                tipo: tipo 
-            })
-        });
+            // Filtro per dipendente corrente
+            const assenzeDip = tutteAssenze.filter(a => {
+                const aId = a.dipendente ? a.dipendente.id : (a.dipendenteId || a.dipendente_id);
+                return aId == dipId;
+            });
 
-        if (res.ok) {
-            alert("Assenza registrata con successo!");
-            chiudiModals();
-            // Ricarica la pagina per aggiornare eventuali visualizzazioni
-            location.reload(); 
-        } else {
-            alert("Errore nel salvataggio dell'assenza.");
+            // Ordina per data (più recente in alto)
+            assenzeDip.sort((a, b) => new Date(b.data) - new Date(a.data));
+
+            // Rendering
+            tbody.innerHTML = '';
+            if (assenzeDip.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px; color:#999;">Nessuna assenza registrata.</td></tr>';
+            }
+
+            let ferieGodute = 0;
+
+            assenzeDip.forEach(a => {
+                if (a.tipo === 'FERIE') ferieGodute++;
+                
+                // Formattazione data e icone
+                const dataObj = new Date(a.data);
+                const dataFmt = isNaN(dataObj) ? a.data : dataObj.toLocaleDateString('it-IT');
+                
+                let icon = '❓';
+                if(a.tipo === 'FERIE') icon = '🏖️';
+                else if(a.tipo === 'MALATTIA') icon = '🤒';
+                else if(a.tipo === 'PERMESSO') icon = '⏱️';
+
+                const noteTxt = a.note ? `<small style="color:#666;">${a.note}</small>` : '-';
+
+                // Costruzione riga tabella
+                const riga = `
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 8px;">${dataFmt}</td>
+                        <td style="padding: 8px;">${icon} ${a.tipo}</td>
+                        <td style="padding: 8px;">${noteTxt}</td>
+                        <td style="padding: 8px; text-align: center;">
+                            <button class="btn-sm" style="background:transparent; color:red; border:none; cursor:pointer; font-weight:bold; font-size:1.2em;" 
+                                onclick="eliminaAssenza(${a.id}, ${dipId})" title="Elimina">&times;</button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += riga;
+            });
+
+            // Aggiornamento Statistiche
+            document.getElementById('statFerieGodute').innerText = ferieGodute;
+            const residuo = FERIE_ANNUALI_STANDARD - ferieGodute;
+            const elResiduo = document.getElementById('statFerieResidue');
+            elResiduo.innerText = residuo;
+            elResiduo.style.color = residuo < 0 ? 'red' : '#2e7d32';
+
+        } catch (e) {
+            console.error("Errore caricamento storico", e);
+            tbody.innerHTML = '<tr><td colspan="4" style="color:red; text-align:center;">Errore caricamento dati.</td></tr>';
         }
     }
 
-    async function elimina(id) {
-    if(confirm("Sei sicuro di voler eliminare questo dipendente? I suoi turni e assenze verranno rimossi.")) {
+    async function salvaAssenza() {
+        const id = document.getElementById('assenzeDipId').value;
+        const data = document.getElementById('dataAssenza').value;
+        const tipo = document.getElementById('tipoAssenza').value;
+        const note = document.getElementById('motivazione').value;
+
+        if(!data) return alert("Inserisci la data");
+
+        const btn = document.querySelector('#modalAssenze .btn-primary');
+        const originalText = btn.innerText;
+        btn.innerText = "Salvataggio..."; btn.disabled = true;
+
         try {
-            const res = await fetch('/api/turni/dipendenti/' + id, { 
+            const res = await fetch('/api/turni/assenza', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ dipendenteId: id, data, tipo, note }) 
+            });
+
+            if (res.ok) {
+                // Svuota i campi e ricarica solo la lista
+                document.getElementById('dataAssenza').value = "";
+                document.getElementById('motivazione').value = "";
+                await caricaAssenzeDipendente(id);
+            } else {
+                alert("Errore salvataggio (possibile duplicato?).");
+            }
+        } catch(e) { console.error(e); alert("Errore connessione."); } 
+        finally { btn.innerText = originalText; btn.disabled = false; }
+    }
+
+    async function eliminaAssenza(assenzaId, dipId) {
+        if(!confirm("Vuoi davvero eliminare questa assenza?")) return;
+
+        try {
+            // Ora questo indirizzo esiste grazie alla modifica Java!
+            const res = await fetch(`/api/turni/assenza/${assenzaId}`, { 
                 method: 'DELETE' 
             });
 
-            if(res.ok) {
-                caricaDipendenti(); // Ricarica la tabella
+            if (res.ok) {
+                await caricaAssenzeDipendente(dipId); 
             } else {
                 alert("Errore durante l'eliminazione.");
             }
@@ -267,13 +360,23 @@
             alert("Errore di connessione.");
         }
     }
+
+    // --- ALTRE FUNZIONI ---
+    async function elimina(id) {
+        if(confirm("Eliminare dipendente? I dati andranno persi.")) {
+            try {
+                const res = await fetch('/api/turni/dipendenti/' + id, { method: 'DELETE' });
+                if(res.ok) caricaDipendenti();
+                else alert("Errore eliminazione.");
+            } catch (e) { console.error(e); alert("Errore connessione."); }
+        }
     }
 
     function chiudiModals() {
         document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
     }
 
-    // Avvio
+    // Avvio iniziale
     caricaDipendenti();
 </script>
 
