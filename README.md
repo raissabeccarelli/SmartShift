@@ -30,12 +30,10 @@ Il progetto ha un **Backend funzionante** e un **Frontend Web** (HTML/JS) già i
 ## Prossimi passi
 Queste sono le funzionalità da implementare nelle prossime iterazioni:
 1.  **UI e Filtri:**
-    * [ ] Migliorie sull'interfaccia della home.
-    * [ ] Ottimizzazione del codice.
-    * [ ] Controllare che il numero minimo di dipendenti per fascia rispetti il numero di dipendenti presenti.
+    * [ ] Ottimizzazione del codice
+    * [ ] Implementare Design Pattern
   
 2. **Assenze, ferie e permessi**
-   * [ ] Controllo visualizzazione dati calendario.
-   * [ ] Aggiornare le ferie residue ad inizio anno.
+   * [ ] Eliminare rigenerazione settimana corrente
 
 ---
