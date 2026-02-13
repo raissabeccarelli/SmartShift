@@ -5,22 +5,32 @@
     <title>SmartShift - Dipendenti</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Stili aggiuntivi per le tabelle interne e badge */
         .btn-info {
             background-color: #17a2b8; color: white;
         }
         .btn-info:hover {
             background-color: #138496;
         }
-        .stat-box {
-            background: #e3f2fd; padding: 10px; border-radius: 6px; 
-            display: flex; justify-content: space-around; margin-top: 10px;
-        }
-        .stat-item { text-align: center; }
-        .stat-label { display:block; font-size: 0.8em; color: #555; }
-        .stat-value { font-size: 1.2em; font-weight: bold; }
         
-        /* Scrollbar per lo storico */
+        /* Stile aggiornato per il box statistiche */
+        .stat-box {
+            background: #e3f2fd; padding: 15px; border-radius: 6px; 
+            margin-top: 10px;
+            display: flex; flex-direction: column; gap: 10px; /* Disposizione a colonna con spazio */
+        }
+        .stat-row {
+            display: flex; justify-content: space-around; width: 100%;
+        }
+        .stat-item { text-align: center; width: 45%; } /* Larghezza fissa per allineamento */
+        .stat-label { display:block; font-size: 0.8em; color: #555; margin-bottom: 2px; }
+        .stat-value { font-size: 1.3em; font-weight: bold; }
+        
+        /* Colori specifici */
+        .val-ferie { color: #0288d1; }
+        .val-residuo { color: #2e7d32; }
+        .val-malattia { color: #d32f2f; }
+        .val-permesso { color: #f57c00; }
+
         .history-container {
             max-height: 250px; overflow-y: auto; 
             border: 1px solid #eee; border-radius: 4px;
@@ -82,13 +92,25 @@
             <p style="color: #666; margin: 5px 0;">Dipendente: <strong id="assenzeDipName"></strong></p>
             
             <div class="stat-box">
-                <div class="stat-item">
-                    <span class="stat-label">Ferie Godute</span>
-                    <strong id="statFerieGodute" class="stat-value" style="color: #0288d1;">0</strong>
+                <div class="stat-row" style="border-bottom: 1px dashed #bcdbf3; padding-bottom: 8px;">
+                    <div class="stat-item">
+                        <span class="stat-label">Ferie Godute 🏖️</span>
+                        <strong id="statFerieGodute" class="stat-value val-ferie">0</strong>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Ferie Residue (su 26)</span>
+                        <strong id="statFerieResidue" class="stat-value val-residuo">0</strong>
+                    </div>
                 </div>
-                <div class="stat-item">
-                    <span class="stat-label">Ferie Residue (su 26gg)</span>
-                    <strong id="statFerieResidue" class="stat-value" style="color: #2e7d32;">0</strong>
+                <div class="stat-row">
+                    <div class="stat-item">
+                        <span class="stat-label">Giorni Malattia 🤒</span>
+                        <strong id="statMalattia" class="stat-value val-malattia">0</strong>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Giorni Permesso ⏱️</span>
+                        <strong id="statPermessi" class="stat-value val-permesso">0</strong>
+                    </div>
                 </div>
             </div>
         </div>
@@ -99,8 +121,12 @@
         <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
             <div style="display: flex; gap: 10px;">
                 <div style="flex: 1;">
-                    <label style="font-size: 0.85em;">Data</label>
-                    <input type="date" id="dataAssenza" style="width: 100%; padding: 5px;">
+                    <label style="font-size: 0.85em;">Dal</label>
+                    <input type="date" id="dataInizio" style="width: 100%; padding: 5px;" onchange="aggiornaDataFine()">
+                </div>
+                <div style="flex: 1;">
+                    <label style="font-size: 0.85em;">Al</label>
+                    <input type="date" id="dataFine" style="width: 100%; padding: 5px;">
                 </div>
                 <div style="flex: 1;">
                     <label style="font-size: 0.85em;">Tipo</label>
@@ -111,7 +137,7 @@
                     </select>
                 </div>
             </div>
-            <textarea id="motivazione" rows="1" placeholder="Note opzionali..." style="width: 100%; margin-top: 10px; font-size: 0.9em;"></textarea>
+            <textarea id="motivazione" rows="1" placeholder="Motivazione (opzionale)..." style="width: 100%; margin-top: 10px; font-size: 0.9em;"></textarea>
             <button class="btn-primary" onclick="salvaAssenza()" style="width: 100%; margin-top: 10px;">Registra Assenza</button>
         </div>
 
@@ -122,21 +148,20 @@
                     <tr>
                         <th style="padding: 8px; text-align: left;">Data</th>
                         <th style="padding: 8px; text-align: left;">Tipo</th>
-                        <th style="padding: 8px; text-align: left;">Note</th>
+                        <th style="padding: 8px; text-align: left;">Motivazione</th>
                         <th style="padding: 8px; text-align: center;">Azioni</th>
                     </tr>
                 </thead>
-                <tbody id="listaAssenzeStorico">
-                    </tbody>
+                <tbody id="listaAssenzeStorico"></tbody>
             </table>
         </div>
     </div>
 </div>
 
 <script>
-    const FERIE_ANNUALI_STANDARD = 26; // Modifica questo numero se necessario
+    const FERIE_ANNUALI_STANDARD = 26;
 
-    // --- GESTIONE LISTA DIPENDENTI ---
+    // --- DIPENDENTI ---
     async function caricaDipendenti() {
         try {
             const res = await fetch('/api/turni/dipendenti');
@@ -158,47 +183,37 @@
                     </tr>
                 `;
             });
-        } catch (e) {
-            console.error("Errore caricamento dipendenti", e);
-        }
+        } catch (e) { console.error(e); }
     }
 
-    // --- LOGICA MODALE DIPENDENTE (CREA/MODIFICA) ---
     function apriModalCrea() {
         document.getElementById('modalTitleDip').innerText = "Nuovo Dipendente";
         document.getElementById('editId').value = "";
-        
-        const inputNome = document.getElementById('nome');
-        const inputCognome = document.getElementById('cognome');
-
-        inputNome.value = ""; inputCognome.value = "";
+        document.getElementById('nome').value = "";
+        document.getElementById('cognome').value = "";
         document.getElementById('oreSett').value = "";
         document.getElementById('oreMax').value = "";
-
-        // Sblocco e stile reset
-        inputNome.readOnly = false; inputCognome.readOnly = false;
-        inputNome.style.backgroundColor = "white"; inputCognome.style.backgroundColor = "white";
-        inputNome.style.cursor = "text"; inputCognome.style.cursor = "text";
-
+        
+        const nomeIn = document.getElementById('nome');
+        const cognIn = document.getElementById('cognome');
+        nomeIn.readOnly = false; cognIn.readOnly = false;
+        nomeIn.style.backgroundColor = "white"; cognIn.style.backgroundColor = "white";
+        
         document.getElementById('modalDipendente').style.display = 'flex';
     }
 
     function apriModifica(d) {
         document.getElementById('modalTitleDip').innerText = "Modifica Dipendente";
         document.getElementById('editId').value = d.id;
-        
-        const inputNome = document.getElementById('nome');
-        const inputCognome = document.getElementById('cognome');
-        
-        inputNome.value = d.nome;
-        inputCognome.value = d.cognome;
+        document.getElementById('nome').value = d.nome;
+        document.getElementById('cognome').value = d.cognome;
         document.getElementById('oreSett').value = d.oreSettimanaliContratto;
         document.getElementById('oreMax').value = d.oreGiornaliereMax;
 
-        // Blocco anagrafica
-        inputNome.readOnly = true; inputCognome.readOnly = true;
-        inputNome.style.backgroundColor = "#e9ecef"; inputCognome.style.backgroundColor = "#e9ecef";
-        inputNome.style.cursor = "not-allowed"; inputCognome.style.cursor = "not-allowed";
+        const nomeIn = document.getElementById('nome');
+        const cognIn = document.getElementById('cognome');
+        nomeIn.readOnly = true; cognIn.readOnly = true;
+        nomeIn.style.backgroundColor = "#e9ecef"; cognIn.style.backgroundColor = "#e9ecef";
 
         document.getElementById('modalDipendente').style.display = 'flex';
     }
@@ -210,68 +225,74 @@
         const oreSett = Number(document.getElementById('oreSett').value);
         const oreMax = Number(document.getElementById('oreMax').value);
 
-        if (!nome || !cognome || document.getElementById('oreSett').value === "" || document.getElementById('oreMax').value === "") {
-            alert("Compila tutti i campi prima di salvare."); return; 
-        }
-        if (oreSett < 0 || oreSett > 40) { alert("Ore settimanali tra 0 e 40!"); return; }
-        if (oreMax < 0 || oreMax > 8) { alert("Ore giornaliere tra 0 e 8!"); return; }
+        if (!nome || !cognome || !oreSett || !oreMax) return alert("Compila tutti i campi");
 
         const dip = { id: id ? id : null, nome, cognome, oreSettimanaliContratto: oreSett, oreGiornaliereMax: oreMax };
-
         try {
             const res = await fetch('/api/turni/dipendenti', {
                 method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dip)
             });
             if(res.ok) { chiudiModals(); caricaDipendenti(); } 
-            else { alert("Errore salvataggio."); }
-        } catch (e) { alert("Errore connessione."); }
+            else alert("Errore salvataggio");
+        } catch (e) { alert("Errore connessione"); }
     }
 
-    // --- LOGICA GESTIONE ASSENZE (NUOVA) ---
+    // --- ASSENZE ---
+    
+    function aggiornaDataFine() {
+        const inizio = document.getElementById('dataInizio').value;
+        const fineInput = document.getElementById('dataFine');
+        if (inizio && !fineInput.value) {
+            fineInput.value = inizio;
+        }
+    }
+
     async function apriAssenze(id, nomeCompleto) {
         document.getElementById('assenzeDipId').value = id;
         document.getElementById('assenzeDipName').innerText = nomeCompleto;
         
-        // Reset campi input
-        document.getElementById('dataAssenza').value = "";
+        // Reset campi
+        document.getElementById('dataInizio').value = "";
+        document.getElementById('dataFine').value = "";
         document.getElementById('motivazione').value = "";
         document.getElementById('tipoAssenza').value = "FERIE";
 
-        // Caricamento dati
         await caricaAssenzeDipendente(id);
         document.getElementById('modalAssenze').style.display = 'flex';
     }
 
     async function caricaAssenzeDipendente(dipId) {
         const tbody = document.getElementById('listaAssenzeStorico');
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px;">Caricamento...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Caricamento...</td></tr>';
 
         try {
-            // Fetch di tutte le assenze (in un'app reale l'API dovrebbe filtrare lato server, qui filtriamo lato client)
             const res = await fetch('/api/turni/assenze');
             const tutteAssenze = await res.json();
 
-            // Filtro per dipendente corrente
             const assenzeDip = tutteAssenze.filter(a => {
                 const aId = a.dipendente ? a.dipendente.id : (a.dipendenteId || a.dipendente_id);
                 return aId == dipId;
             });
 
-            // Ordina per data (più recente in alto)
             assenzeDip.sort((a, b) => new Date(b.data) - new Date(a.data));
 
-            // Rendering
             tbody.innerHTML = '';
             if (assenzeDip.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px; color:#999;">Nessuna assenza registrata.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999;">Nessuna assenza.</td></tr>';
             }
 
+            // --- CONTATORI ---
             let ferieGodute = 0;
+            let malattiaCount = 0;
+            let permessoCount = 0;
 
             assenzeDip.forEach(a => {
+                // Conteggio in base al tipo
                 if (a.tipo === 'FERIE') ferieGodute++;
+                else if (a.tipo === 'MALATTIA') malattiaCount++;
+                else if (a.tipo === 'PERMESSO') permessoCount++;
                 
-                // Formattazione data e icone
+                // Formattazione
                 const dataObj = new Date(a.data);
                 const dataFmt = isNaN(dataObj) ? a.data : dataObj.toLocaleDateString('it-IT');
                 
@@ -280,10 +301,10 @@
                 else if(a.tipo === 'MALATTIA') icon = '🤒';
                 else if(a.tipo === 'PERMESSO') icon = '⏱️';
 
-                const noteTxt = a.note ? `<small style="color:#666;">${a.note}</small>` : '-';
+                const mot = a.motivazione || a.note || "";
+                const noteTxt = mot ? `<small style="color:#666;">${mot}</small>` : '-';
 
-                // Costruzione riga tabella
-                const riga = `
+                tbody.innerHTML += `
                     <tr style="border-bottom: 1px solid #eee;">
                         <td style="padding: 8px;">${dataFmt}</td>
                         <td style="padding: 8px;">${icon} ${a.tipo}</td>
@@ -294,29 +315,32 @@
                         </td>
                     </tr>
                 `;
-                tbody.innerHTML += riga;
             });
 
-            // Aggiornamento Statistiche
+            // --- AGGIORNAMENTO STATISTICHE UI ---
             document.getElementById('statFerieGodute').innerText = ferieGodute;
+            
             const residuo = FERIE_ANNUALI_STANDARD - ferieGodute;
             const elResiduo = document.getElementById('statFerieResidue');
             elResiduo.innerText = residuo;
             elResiduo.style.color = residuo < 0 ? 'red' : '#2e7d32';
 
-        } catch (e) {
-            console.error("Errore caricamento storico", e);
-            tbody.innerHTML = '<tr><td colspan="4" style="color:red; text-align:center;">Errore caricamento dati.</td></tr>';
-        }
+            // Nuovi contatori
+            document.getElementById('statMalattia').innerText = malattiaCount;
+            document.getElementById('statPermessi').innerText = permessoCount;
+
+        } catch (e) { console.error(e); }
     }
 
     async function salvaAssenza() {
         const id = document.getElementById('assenzeDipId').value;
-        const data = document.getElementById('dataAssenza').value;
+        const dataInizio = document.getElementById('dataInizio').value;
+        const dataFine = document.getElementById('dataFine').value;
         const tipo = document.getElementById('tipoAssenza').value;
-        const note = document.getElementById('motivazione').value;
+        const motivazione = document.getElementById('motivazione').value;
 
-        if(!data) return alert("Inserisci la data");
+        if(!dataInizio || !dataFine) return alert("Inserisci il range di date (Dal - Al)");
+        if(dataInizio > dataFine) return alert("La data fine non può essere prima dell'inizio");
 
         const btn = document.querySelector('#modalAssenze .btn-primary');
         const originalText = btn.innerText;
@@ -326,49 +350,44 @@
             const res = await fetch('/api/turni/assenza', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ dipendenteId: id, data, tipo, note }) 
+                body: JSON.stringify({ 
+                    dipendenteId: id, 
+                    dataInizio: dataInizio, 
+                    dataFine: dataFine,
+                    tipo: tipo, 
+                    motivazione: motivazione 
+                }) 
             });
 
             if (res.ok) {
-                // Svuota i campi e ricarica solo la lista
-                document.getElementById('dataAssenza').value = "";
+                document.getElementById('dataInizio').value = "";
+                document.getElementById('dataFine').value = "";
                 document.getElementById('motivazione').value = "";
                 await caricaAssenzeDipendente(id);
             } else {
-                alert("Errore salvataggio (possibile duplicato?).");
+                const err = await res.json();
+                alert("Errore: " + (err.error || "Impossibile salvare"));
             }
         } catch(e) { console.error(e); alert("Errore connessione."); } 
         finally { btn.innerText = originalText; btn.disabled = false; }
     }
 
     async function eliminaAssenza(assenzaId, dipId) {
-        if(!confirm("Vuoi davvero eliminare questa assenza?")) return;
-
+        if(!confirm("Vuoi eliminare questa assenza?")) return;
         try {
-            // Ora questo indirizzo esiste grazie alla modifica Java!
-            const res = await fetch(`/api/turni/assenza/${assenzaId}`, { 
-                method: 'DELETE' 
-            });
-
-            if (res.ok) {
-                await caricaAssenzeDipendente(dipId); 
-            } else {
-                alert("Errore durante l'eliminazione.");
-            }
-        } catch (e) {
-            console.error(e);
-            alert("Errore di connessione.");
-        }
+            const res = await fetch(`/api/turni/assenza/${assenzaId}`, { method: 'DELETE' });
+            if (res.ok) await caricaAssenzeDipendente(dipId);
+            else alert("Impossibile eliminare.");
+        } catch (e) { alert("Errore connessione."); }
     }
 
-    // --- ALTRE FUNZIONI ---
     async function elimina(id) {
-        if(confirm("Eliminare dipendente? I dati andranno persi.")) {
+        if(confirm("Eliminare dipendente?")) {
             try {
                 const res = await fetch('/api/turni/dipendenti/' + id, { method: 'DELETE' });
                 if(res.ok) caricaDipendenti();
                 else alert("Errore eliminazione.");
-            } catch (e) { console.error(e); alert("Errore connessione."); }
+            } catch (e) { alert("Errore connessione."); }
         }
     }
 
@@ -376,7 +395,6 @@
         document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
     }
 
-    // Avvio iniziale
     caricaDipendenti();
 </script>
 

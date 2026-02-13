@@ -33,31 +33,25 @@ public class TurnoController {
     @Autowired private DipendenteRepository dipendenteRepository;
     @Autowired private AssenzaRepository assenzaRepository;
 
-    // --- CONFIGURAZIONE SLOT (Per il Frontend) ---
+    // --- CONFIGURAZIONE SLOT ---
     @GetMapping("/config-slot")
     public ResponseEntity<?> getConfigurazioneSlot() {
         return ResponseEntity.ok(turnoService.getConfigurazioneSlot());
     }
 
-    // --- 1. GENERAZIONE (AGGIORNATO E CORRETTO) ---
-    
-    // DTO aggiornato con Getter e Setter per garantire che Spring legga i dati
+    // --- 1. GENERAZIONE ---
     public static class GenerazioneRequest {
         private String data;
         private int minMattina;
         private int minPomeriggio;
         private int minSera;
 
-        // Getter e Setter sono FONDAMENTALI per Spring Boot
         public String getData() { return data; }
         public void setData(String data) { this.data = data; }
-
         public int getMinMattina() { return minMattina; }
         public void setMinMattina(int minMattina) { this.minMattina = minMattina; }
-
         public int getMinPomeriggio() { return minPomeriggio; }
         public void setMinPomeriggio(int minPomeriggio) { this.minPomeriggio = minPomeriggio; }
-
         public int getMinSera() { return minSera; }
         public void setMinSera(int minSera) { this.minSera = minSera; }
     }
@@ -65,29 +59,11 @@ public class TurnoController {
     @PostMapping("/genera")
     public ResponseEntity<?> generaTurni(@RequestBody GenerazioneRequest req) {
         try {
-            // --- STAMPE DI DEBUG (Guarda la console di Spring!) ---
-            System.out.println(">>> RICHIESTA GENERAZIONE RICEVUTA <<<");
-            System.out.println("Data: " + req.getData());
-            System.out.println("Mattina richiesti: " + req.getMinMattina());
-            System.out.println("Pomeriggio richiesti: " + req.getMinPomeriggio());
-            System.out.println("Sera richiesti: " + req.getMinSera());
-            // -----------------------------------------------------
-
-            if (req.getData() == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Data mancante"));
-            }
-
+            if (req.getData() == null) return ResponseEntity.badRequest().body(Map.of("error", "Data mancante"));
             LocalDate start = LocalDate.parse(req.getData());
             LocalDate lunedi = start.with(java.time.DayOfWeek.MONDAY);
             
-            // Chiamata al Service
-            turnoService.generaTurniPerSettimana(
-                lunedi, 
-                req.getMinMattina(), 
-                req.getMinPomeriggio(), 
-                req.getMinSera()
-            );
-            
+            turnoService.generaTurniPerSettimana(lunedi, req.getMinMattina(), req.getMinPomeriggio(), req.getMinSera());
             return ResponseEntity.ok(Map.of("message", "Turni generati per la settimana del " + lunedi));
         } catch (Exception e) {
             e.printStackTrace(); 
@@ -138,10 +114,11 @@ public class TurnoController {
         }
     }
 
-    // --- 4. GESTIONE ASSENZE ---
+    // --- 4. GESTIONE ASSENZE (AGGIORNATO PER RANGE DI DATE) ---
     public static class AssenzaRequest {
         public Long dipendenteId;
-        public String data;
+        public String dataInizio; // Modificato: Da singola data a Inizio
+        public String dataFine;   // Aggiunto: Fine
         public String tipo;
         public String motivazione;
     }
@@ -149,10 +126,35 @@ public class TurnoController {
     @PostMapping("/assenza")
     public ResponseEntity<?> inserisciAssenza(@RequestBody AssenzaRequest req) {
         try {
-            LocalDate start = LocalDate.parse(req.data);
-            turnoService.aggiungiAssenza(req.dipendenteId, start, start, req.tipo, req.motivazione);
-            return ResponseEntity.ok(Map.of("message", "Assenza inserita"));
-        } catch (RuntimeException e) {
+            LocalDate start = LocalDate.parse(req.dataInizio);
+            LocalDate end = LocalDate.parse(req.dataFine);
+
+            if (end.isBefore(start)) {
+                return ResponseEntity.badRequest().body(Map.of("error", "La data di fine non può essere precedente all'inizio"));
+            }
+
+            Dipendente dip = dipendenteRepository.findById(req.dipendenteId)
+                    .orElseThrow(() -> new RuntimeException("Dipendente non trovato"));
+
+            // CICLO: Inseriamo una riga nel DB per ogni giorno compreso tra start ed end
+            LocalDate current = start;
+            while (!current.isAfter(end)) {
+                Assenza a = new Assenza();
+                a.setDipendente(dip);
+                a.setData(current); // Data del singolo giorno
+                a.setTipo(req.tipo);
+                // Usiamo setMotivazione come richiesto
+                a.setMotivazione(req.motivazione); 
+
+                assenzaRepository.save(a);
+                
+                // Avanziamo di un giorno
+                current = current.plusDays(1);
+            }
+
+            return ResponseEntity.ok(Map.of("message", "Assenze inserite dal " + start + " al " + end));
+        } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
@@ -162,7 +164,7 @@ public class TurnoController {
         return assenzaRepository.findAll();
     }
 
-    // AGGIUNGI QUESTO METODO PER ABILITARE L'ELIMINAZIONE
+    // Metodo per eliminare le assenze (che mancava prima)
     @DeleteMapping("/assenza/{id}")
     public ResponseEntity<?> eliminaAssenza(@PathVariable Long id) {
         if (assenzaRepository.existsById(id)) {
@@ -184,22 +186,14 @@ public class TurnoController {
         return dipendenteRepository.save(nuovoDipendente);
     }
 
-    // 6. CANCELLAZIONE DIPENDENTE
     @Transactional
     @DeleteMapping("/dipendenti/{id}")
     public ResponseEntity<?> eliminaDipendente(@PathVariable Long id) {
         try {
-            // 1. Cerchiamo il dipendente
             Dipendente d = dipendenteRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Dipendente non trovato"));
-
-            // 2. Eliminiamo prima i suoi turni manualmente per evitare conflitti di Foreign Key
-            // Supponendo che tu abbia un metodo nel repository dei turni o lo faccia tramite query
             turnoRepository.deleteByDipendente(d);
-
-            // 3. Eliminiamo il dipendente (le assenze verranno eliminate dal CascadeType.ALL)
             dipendenteRepository.delete(d);
-
             return ResponseEntity.ok().body(Map.of("message", "Eliminato con successo"));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
