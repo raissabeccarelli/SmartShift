@@ -32,10 +32,10 @@ Queste sono le funzionalità da implementare nelle prossime iterazioni:
 1.  **UI e Filtri:**
     * [ ] Migliorie sull'interfaccia della home.
     * [ ] Ottimizzazione del codice.
+    * [ ] Controllare che il numero minimo di dipendenti per fascia rispetti il numero di dipendenti presenti.
   
-2. **Assenze**
-   * [ ] Mettere per ferie e malattie il range di date da a.
+2. **Assenze, ferie e permessi**
    * [ ] Controllo visualizzazione dati calendario.
-   * [ ] Sistemare il CRUD
+   * [ ] Aggiornare le ferie residue ad inizio anno.
 
 ---
