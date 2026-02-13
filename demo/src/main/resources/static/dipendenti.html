@@ -94,7 +94,7 @@
             <div class="stat-box">
                 <div class="stat-row" style="border-bottom: 1px dashed #bcdbf3; padding-bottom: 8px;">
                     <div class="stat-item">
-                        <span class="stat-label">Ferie Godute 🏖️</span>
+                        <span class="stat-label">Ferie Godute</span>
                         <strong id="statFerieGodute" class="stat-value val-ferie">0</strong>
                     </div>
                     <div class="stat-item">
@@ -104,11 +104,11 @@
                 </div>
                 <div class="stat-row">
                     <div class="stat-item">
-                        <span class="stat-label">Giorni Malattia 🤒</span>
+                        <span class="stat-label">Giorni Malattia</span>
                         <strong id="statMalattia" class="stat-value val-malattia">0</strong>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">Giorni Permesso ⏱️</span>
+                        <span class="stat-label">Giorni Permesso</span>
                         <strong id="statPermessi" class="stat-value val-permesso">0</strong>
                     </div>
                 </div>
@@ -131,9 +131,9 @@
                 <div style="flex: 1;">
                     <label style="font-size: 0.85em;">Tipo</label>
                     <select id="tipoAssenza" style="width: 100%; padding: 6px;">
-                        <option value="FERIE">Ferie 🏖️</option>
-                        <option value="MALATTIA">Malattia 🤒</option>
-                        <option value="PERMESSO">Permesso ⏱️</option>
+                        <option value="FERIE">Ferie</option>
+                        <option value="MALATTIA">Malattia</option>
+                        <option value="PERMESSO">Permesso</option>
                     </select>
                 </div>
             </div>
@@ -141,7 +141,7 @@
             <button class="btn-primary" onclick="salvaAssenza()" style="width: 100%; margin-top: 10px;">Registra Assenza</button>
         </div>
 
-        <h4 style="margin-top: 20px; margin-bottom: 10px;">📜 Storico Assenze</h4>
+        <h4 style="margin-top: 20px; margin-bottom: 10px;">Storico Assenze</h4>
         <div class="history-container">
             <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
                 <thead style="background: #f1f1f1; position: sticky; top: 0;">
@@ -302,11 +302,6 @@
                 
                 const dataObj = new Date(a.data);
                 const dataFmt = isNaN(dataObj) ? a.data : dataObj.toLocaleDateString('it-IT');
-                
-                let icon = '❓';
-                if(a.tipo === 'FERIE') icon = '🏖️';
-                else if(a.tipo === 'MALATTIA') icon = '🤒';
-                else if(a.tipo === 'PERMESSO') icon = '⏱️';
 
                 const mot = a.motivazione || a.note || "";
                 const noteTxt = mot ? `<small style="color:#666;">${mot}</small>` : '-';

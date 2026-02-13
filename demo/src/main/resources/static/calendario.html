@@ -5,7 +5,8 @@
     <title>SmartShift - Calendario</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* --- STILI PER LE SEGNALAZIONI --- */
+
+/* --- STILI PER LE SEGNALAZIONI --- */
         .shift-card.overtime {
             border: 2px solid #6f42c1;
             background-color: #f3e8ff;
@@ -41,6 +42,17 @@
             font-size: 0.7em; color: #ddd; padding: 2px; text-align: center; font-style: italic;
         }
 
+        /* --- INPUT NEL MODALE CONFIGURAZIONE --- */
+        .config-row {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px;
+        }
+        .config-row label { font-weight: bold; color: #495057; }
+        .config-input {
+            width: 60px; padding: 5px; border: 1px solid #ced4da; border-radius: 4px; text-align: center;
+        }
+
+        
         /* --- STILI GENERALI --- */
         .shift-card { position: relative; }
         .btn-delete-shift {
@@ -66,15 +78,6 @@
         .close-styled { font-size: 28px; color: #aaa; cursor: pointer; line-height: 1; }
         .close-styled:hover { color: #333; }
 
-        /* --- INPUT NEL MODALE CONFIGURAZIONE --- */
-        .config-row {
-            display: flex; align-items: center; justify-content: space-between;
-            margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px;
-        }
-        .config-row label { font-weight: bold; color: #495057; }
-        .config-input {
-            width: 60px; padding: 5px; border: 1px solid #ced4da; border-radius: 4px; text-align: center;
-        }
     </style>
 </head>
 <body>
@@ -129,20 +132,20 @@
             <p>Imposta il numero <strong>minimo</strong> di dipendenti per fascia oraria.</p>
             <input type="hidden" id="configDateValue">
             <div class="config-row">
-                <label>🌅 Mattina (06:00 - 12:00)</label>
+                <label>Mattina (06:00 - 12:00)</label>
                 <input type="number" id="confMattina" class="config-input" value="3" min="0">
             </div>
             <div class="config-row">
-                <label>☀️ Pomeriggio (12:00 - 18:00)</label>
+                <label>Pomeriggio (12:00 - 18:00)</label>
                 <input type="number" id="confPomeriggio" class="config-input" value="4" min="0">
             </div>
             <div class="config-row">
-                <label>🌙 Sera (18:00 - 23:00)</label>
+                <label>Sera (18:00 - 23:00)</label>
                 <input type="number" id="confSera" class="config-input" value="5" min="0">
             </div>
             <div style="text-align: right; margin-top: 20px;">
                 <button class="btn-secondary" onclick="chiudiModal('modalConfigura')">Annulla</button>
-                <button class="btn-primary" onclick="confermaGenerazione()">🚀 Genera Turni</button>
+                <button class="btn-primary" onclick="confermaGenerazione()">Genera Turni</button>
             </div>
         </div>
     </div>
@@ -219,8 +222,8 @@
                 <button class="btn-primary" onclick="apriTurni('${week.startStr}', '${week.endStr}', false)">👁️ Vedi</button>
                 <button class="btn-secondary" onclick="apriTurni('${week.startStr}', '${week.endStr}', true)">✏️ Modifica</button>
                 <button class="btn-warning" onclick="apriConfigurazioneGenerazione('${week.startStr}')">🔄 Ricalcola</button>
-            ` : `<button class="btn-success" onclick="apriConfigurazioneGenerazione('${week.startStr}')">⚡ Genera Turni</button>`;
-            div.innerHTML = `<div><h3>Settimana ${week.label}</h3><span style="color:${hasShifts?'green':'red'}">${hasShifts?'✅ Pianificata':'⚠️ Da Pianificare'}</span></div><div style="display:flex;gap:5px;">${buttonsHtml}</div>`;
+            ` : `<button class="btn-success" onclick="apriConfigurazioneGenerazione('${week.startStr}')">Genera Turni</button>`;
+            div.innerHTML = `<div><h3>Settimana ${week.label}</h3><span style="color:${hasShifts?'green':'red'}">${hasShifts?'Pianificata':'Da Pianificare'}</span></div><div style="display:flex;gap:5px;">${buttonsHtml}</div>`;
             container.appendChild(div);
         });
     }
@@ -238,7 +241,7 @@
         if(!data || minM < 0) { alert("Dati non validi"); return; }
 
         const btn = document.querySelector('#modalConfigura .btn-primary');
-        const originalText = btn.innerText; btn.innerText = "⏳ Generazione..."; btn.disabled = true;
+        const originalText = btn.innerText; btn.innerText = "Generazione..."; btn.disabled = true;
         
         try {
             const res = await fetch('/api/turni/genera', {
@@ -262,8 +265,22 @@
         const idFiltro = document.getElementById('filtroDipendente').value;
         
         gridContainer.innerHTML = ''; 
-        modalTitle.innerText = (isEditMode ? "MODIFICA: " : "VISTA: ") + `${startStr}`;
-        modalTitle.style.color = isEditMode ? "#d63384" : "#333";
+        
+        // --- MODIFICA LOGICA TITOLO ---
+        const dStart = new Date(startStr);
+        const dEnd = new Date(endStr);
+        const opts = { day: 'numeric', month: 'long', year: 'numeric' };
+        
+        const dataFormatted = `dal ${dStart.toLocaleDateString('it-IT', opts)} al ${dEnd.toLocaleDateString('it-IT', opts)}`;
+        
+        if (isEditMode) {
+            modalTitle.innerText = `Modifica settimana ${dataFormatted}`;
+            modalTitle.style.color = "#d63384"; // Colore magenta per edit
+        } else {
+            modalTitle.innerText = `Settimana ${dataFormatted}`;
+            modalTitle.style.color = "#333"; // Colore standard
+        }
+        // ------------------------------
 
         let oreMap = {};
         tuttiDipendenti.forEach(d => oreMap[d.id] = 0);
@@ -329,7 +346,7 @@
                     <div class="shift-card ${isOver?'overtime':''} ${isEditMode?'edit-mode':''}">
                         ${isEditMode ? `<button class="btn-delete-shift" onclick="eliminaTurno(${t.id})">&times;</button>` : ''}
                         <div class="shift-name">👤 ${t.dipendente.nome} ${t.dipendente.cognome.charAt(0)}. ${isOver?'<span class="badge-overtime">EXTRA</span>':''}</div>
-                        <div class="shift-time">⏰ ${t.oraInizio} - ${t.oraFine}</div>
+                        <div class="shift-time">${t.oraInizio} - ${t.oraFine}</div>
                     </div>`;
                 
                 let hStart = parseInt(t.oraInizio.split(':')[0]);
@@ -342,9 +359,9 @@
             let dailyBody = '';
             
             // Renderizziamo sempre le fasce per struttura
-            dailyBody += `<div class="slot-divider">🌅 Mattina <small>(06-12)</small></div>` + (cM > 0 ? htmlM : emptyPl);
-            dailyBody += `<div class="slot-divider">☀️ Pomeriggio <small>(12-18)</small></div>` + (cP > 0 ? htmlP : emptyPl);
-            dailyBody += `<div class="slot-divider">🌙 Sera <small>(18-23)</small></div>` + (cS > 0 ? htmlS : emptyPl);
+            dailyBody += `<div class="slot-divider">Mattina <small>(06-12)</small></div>` + (cM > 0 ? htmlM : emptyPl);
+            dailyBody += `<div class="slot-divider">Pomeriggio <small>(12-18)</small></div>` + (cP > 0 ? htmlP : emptyPl);
+            dailyBody += `<div class="slot-divider">Sera <small>(18-23)</small></div>` + (cS > 0 ? htmlS : emptyPl);
 
             const addBtn = isEditMode ? `<button class="btn-add-slot" onclick="apriModalAggiungi('${dateKey}', '${startStr}', '${endStr}')">+ Aggiungi</button>` : '';
             const opts = { weekday: 'short', day: '2-digit', month: '2-digit' };

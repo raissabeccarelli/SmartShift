@@ -234,3 +234,55 @@ input, select, textarea {
         min-height: auto;
     }
 }
+
+
+/* Personalizzazione della griglia per la home */
+.calendar-grid {
+    margin-top: 10px;
+}
+
+/* Stile leggermente diverso per i turni in home per differenziarli */
+.shift-card {
+    border-left: 4px solid var(--primary); /* Blu invece di verde per la home */
+    margin-bottom: 8px;
+    background: white;
+    padding: 10px;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.shift-time {
+    font-weight: bold;
+    color: #555;
+    background-color: #f1f3f5;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.85em;
+}
+
+.user-name {
+    margin-top: 4px;
+    font-size: 0.95em;
+    color: var(--dark);
+}
+
+/* Stato vuoto per il giorno */
+.day-empty {
+    text-align: center;
+    color: #ccc;
+    font-style: italic;
+    padding: 20px 0;
+    font-size: 0.9em;
+}
+
+/* Highlight per il giorno corrente */
+.day-column.today {
+    border: 2px solid var(--primary);
+    background-color: #f8fbff;
+}
+.day-column.today .day-header {
+    background-color: var(--primary);
+    font-size: 1.1em;
+    text-decoration: underline;
+}
+

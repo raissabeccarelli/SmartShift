@@ -13,29 +13,26 @@
     <a href="dipendenti.html">Gestione Dipendenti</a>
 </div>
 
-<div class="container">
-    <div class="card">
-        <h1>Benvenuto in SmartShift</h1>
-        <p>Ecco la programmazione per la <strong>Settimana Corrente</strong>.</p>
-        <div id="date-range" style="margin-bottom: 15px; font-weight: bold; color: #666;"></div>
-        
-        <table id="tabella-home">
-            <thead>
-                <tr>
-                    <th>Giorno</th>
-                    <th>Orario</th>
-                    <th>Dipendente</th>
-                </tr>
-            </thead>
-            <tbody id="corpo-home">
-                <tr><td colspan="3" style="text-align:center;">Caricamento turni...</td></tr>
-            </tbody>
-        </table>
+<div class="container" style="max-width: 1400px;"> <div class="card" style="margin-bottom: 20px;">
+        <h1 style="margin-bottom: 5px;">Benvenuto in SmartShift</h1>
+        <p id="intestazione-settimana" style="color: #666; font-size: 1.1em; margin-top: 0;">
+            Caricamento date...
+        </p>
     </div>
+
+    <div id="griglia-home" class="calendar-grid">
+        <div style="grid-column: 1/-1; text-align: center; padding: 40px;">Caricamento turni in corso...</div>
+    </div>
+
 </div>
 
 <script>
-    // Utility per le date
+    // Utility per formattazione data YYYY-MM-DD (per confronti)
+    function getYMD(d) {
+        return d.toLocaleDateString('en-CA'); // Restituisce formato ISO locale YYYY-MM-DD
+    }
+
+    // Utility per trovare il Lunedì
     function getMonday(d) {
         d = new Date(d);
         var day = d.getDay(),
@@ -49,52 +46,69 @@
         const domenica = new Date(lunedi);
         domenica.setDate(lunedi.getDate() + 6);
 
-        // Mostra range date
-        document.getElementById('date-range').innerText = 
-            `Dal ${lunedi.toLocaleDateString()} al ${domenica.toLocaleDateString()}`;
+        // Imposta testo intestazione
+        const optsDate = { day: 'numeric', month: 'long', year: 'numeric' };
+        document.getElementById('intestazione-settimana').innerHTML = 
+            `Ecco la programmazione per la settimana dal <strong>${lunedi.toLocaleDateString('it-IT', optsDate)}</strong> al <strong>${domenica.toLocaleDateString('it-IT', optsDate)}</strong>`;
 
-        // Fetch di TUTTI i turni (poi filtriamo lato client)
-        // NOTA: Se il backend supporta filtri per data, meglio usarli lì!
-        const res = await fetch('/api/turni');
-        const turni = await res.json();
+        try {
+            // Fetch dati
+            const res = await fetch('/api/turni');
+            const turni = await res.json();
 
-        // Filtra solo turni di questa settimana
-        const turniSettimana = turni.filter(t => {
-            const dataTurno = new Date(t.data);
-            // Azzera ore per confronto preciso
-            dataTurno.setHours(0,0,0,0);
-            lunedi.setHours(0,0,0,0);
-            domenica.setHours(23,59,59,999);
-            return dataTurno >= lunedi && dataTurno <= domenica;
-        });
+            // Preparazione rendering griglia
+            const container = document.getElementById('griglia-home');
+            container.innerHTML = ''; // Pulisce il loader
 
-        // Ordina
-        turniSettimana.sort((a, b) => (a.data + a.oraInizio).localeCompare(b.data + b.oraInizio));
+            // Loop per i 7 giorni (Lunedì -> Domenica)
+            for (let i = 0; i < 7; i++) {
+                let currentDay = new Date(lunedi);
+                currentDay.setDate(lunedi.getDate() + i);
+                
+                let dateKey = getYMD(currentDay);
+                let isToday = getYMD(oggi) === dateKey;
 
-        // Render
-        const tbody = document.getElementById('corpo-home');
-        tbody.innerHTML = '';
-        
-        if(turniSettimana.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Nessun turno pianificato per questa settimana. <a href="calendario.html">Vai al Calendario</a></td></tr>';
-            return;
-        }
+                // Filtra i turni per questo giorno specifico
+                let turniGiorno = turni.filter(t => t.data === dateKey);
+                
+                // Ordina per orario
+                turniGiorno.sort((a, b) => a.oraInizio.localeCompare(b.oraInizio));
 
-        let lastDate = '';
-        turniSettimana.forEach(t => {
-            // Raggruppamento visivo per giorno
-            if (t.data !== lastDate) {
-                tbody.innerHTML += `<tr style="background:#f1f8ff;"><td colspan="3"><strong>${t.data}</strong></td></tr>`;
-                lastDate = t.data;
+                // HTML Intestazione Giorno
+                let htmlContent = `
+                    <div class="day-column ${isToday ? 'today' : ''}">
+                        <div class="day-header">
+                            ${currentDay.toLocaleDateString('it-IT', { weekday: 'long', day: '2-digit', month: '2-digit' })}
+                        </div>
+                        <div class="day-body">
+                `;
+
+                // HTML Corpo Turni
+                if (turniGiorno.length === 0) {
+                    htmlContent += `<div class="day-empty">-</div>`;
+                } else {
+                    turniGiorno.forEach(t => {
+                        htmlContent += `
+                            <div class="shift-card">
+                                <div class="shift-time">
+                                    ${t.oraInizio.substring(0, 5)} - ${t.oraFine.substring(0, 5)}
+                                </div>
+                                <div class="user-name">
+                                    👤 ${t.dipendente.cognome} ${t.dipendente.nome}
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                htmlContent += `</div></div>`; // Chiude day-body e day-column
+                container.innerHTML += htmlContent;
             }
-            tbody.innerHTML += `
-                <tr>
-                    <td></td>
-                    <td>⏰ ${t.oraInizio} - ${t.oraFine}</td>
-                    <td>👤 ${t.dipendente.cognome} ${t.dipendente.nome}</td>
-                </tr>
-            `;
-        });
+
+        } catch (error) {
+            console.error("Errore:", error);
+            document.getElementById('griglia-home').innerHTML = '<div style="color:red; text-align:center;">Errore nel caricamento dei turni.</div>';
+        }
     }
 
     caricaHome();
