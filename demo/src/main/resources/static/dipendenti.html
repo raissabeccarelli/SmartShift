@@ -12,16 +12,16 @@
             background-color: #138496;
         }
         
-        /* Stile aggiornato per il box statistiche */
+        /* Stile per il box statistiche */
         .stat-box {
             background: #e3f2fd; padding: 15px; border-radius: 6px; 
             margin-top: 10px;
-            display: flex; flex-direction: column; gap: 10px; /* Disposizione a colonna con spazio */
+            display: flex; flex-direction: column; gap: 10px;
         }
         .stat-row {
             display: flex; justify-content: space-around; width: 100%;
         }
-        .stat-item { text-align: center; width: 45%; } /* Larghezza fissa per allineamento */
+        .stat-item { text-align: center; width: 45%; }
         .stat-label { display:block; font-size: 0.8em; color: #555; margin-bottom: 2px; }
         .stat-value { font-size: 1.3em; font-weight: bold; }
         
@@ -98,7 +98,7 @@
                         <strong id="statFerieGodute" class="stat-value val-ferie">0</strong>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">Ferie Residue (su 26)</span>
+                        <span class="stat-label">Ferie Residue (Database)</span>
                         <strong id="statFerieResidue" class="stat-value val-residuo">0</strong>
                     </div>
                 </div>
@@ -159,7 +159,8 @@
 </div>
 
 <script>
-    const FERIE_ANNUALI_STANDARD = 26;
+    const FERIE_ANNUALI_STANDARD = 26; // Non usiamo più questo per il calcolo residuo, ma lo teniamo come riferimento
+    let currentEmployeeAbsences = []; 
 
     // --- DIPENDENTI ---
     async function caricaDipendenti() {
@@ -177,7 +178,7 @@
                         <td>${d.oreSettimanaliContratto}h</td>
                         <td>
                             <button class="btn-sm btn-primary" onclick='apriModifica(${JSON.stringify(d)})'>Modifica</button>
-                            <button class="btn-sm btn-info" onclick="apriAssenze(${d.id}, '${d.nome} ${d.cognome}')">Gestisci Assenze</button>
+                            <button class="btn-sm btn-info" onclick="apriAssenze(${d.id}, '${d.nome} ${d.cognome}', ${d.ferieResidue})">Gestisci Assenze</button>
                             <button class="btn-sm btn-danger" onclick="elimina(${d.id})">Elimina</button>
                         </td>
                     </tr>
@@ -238,20 +239,27 @@
     }
 
     // --- ASSENZE ---
-    
     function aggiornaDataFine() {
         const inizio = document.getElementById('dataInizio').value;
         const fineInput = document.getElementById('dataFine');
-        if (inizio && !fineInput.value) {
-            fineInput.value = inizio;
+        if (inizio) {
+            if (!fineInput.value || fineInput.value < inizio) {
+                fineInput.value = inizio;
+            }
         }
     }
 
-    async function apriAssenze(id, nomeCompleto) {
+    // MODIFICA 2: Riceviamo 'residuoReale' e lo mostriamo subito
+    async function apriAssenze(id, nomeCompleto, residuoReale) {
         document.getElementById('assenzeDipId').value = id;
         document.getElementById('assenzeDipName').innerText = nomeCompleto;
         
-        // Reset campi
+        // Imposta il valore DIRETTAMENTE dal Database
+        const elResiduo = document.getElementById('statFerieResidue');
+        elResiduo.innerText = residuoReale;
+        elResiduo.style.color = residuoReale < 0 ? 'red' : '#2e7d32';
+
+        // Reset campi form
         document.getElementById('dataInizio').value = "";
         document.getElementById('dataFine').value = "";
         document.getElementById('motivazione').value = "";
@@ -273,7 +281,8 @@
                 const aId = a.dipendente ? a.dipendente.id : (a.dipendenteId || a.dipendente_id);
                 return aId == dipId;
             });
-
+            
+            currentEmployeeAbsences = assenzeDip;
             assenzeDip.sort((a, b) => new Date(b.data) - new Date(a.data));
 
             tbody.innerHTML = '';
@@ -281,18 +290,16 @@
                 tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999;">Nessuna assenza.</td></tr>';
             }
 
-            // --- CONTATORI ---
+            // Contatori solo per statistica "Godute"
             let ferieGodute = 0;
             let malattiaCount = 0;
             let permessoCount = 0;
 
             assenzeDip.forEach(a => {
-                // Conteggio in base al tipo
                 if (a.tipo === 'FERIE') ferieGodute++;
                 else if (a.tipo === 'MALATTIA') malattiaCount++;
                 else if (a.tipo === 'PERMESSO') permessoCount++;
                 
-                // Formattazione
                 const dataObj = new Date(a.data);
                 const dataFmt = isNaN(dataObj) ? a.data : dataObj.toLocaleDateString('it-IT');
                 
@@ -317,15 +324,9 @@
                 `;
             });
 
-            // --- AGGIORNAMENTO STATISTICHE UI ---
+            // MODIFICA 3: Mostriamo solo le godute e gli altri contatori.
+            // NON calcoliamo più il residuo qui, perché lo abbiamo già settato in apriAssenze
             document.getElementById('statFerieGodute').innerText = ferieGodute;
-            
-            const residuo = FERIE_ANNUALI_STANDARD - ferieGodute;
-            const elResiduo = document.getElementById('statFerieResidue');
-            elResiduo.innerText = residuo;
-            elResiduo.style.color = residuo < 0 ? 'red' : '#2e7d32';
-
-            // Nuovi contatori
             document.getElementById('statMalattia').innerText = malattiaCount;
             document.getElementById('statPermessi').innerText = permessoCount;
 
@@ -341,6 +342,26 @@
 
         if(!dataInizio || !dataFine) return alert("Inserisci il range di date (Dal - Al)");
         if(dataInizio > dataFine) return alert("La data fine non può essere prima dell'inizio");
+
+        // --- CONTROLLO SOVRAPPOSIZIONI ---
+        let checkDate = new Date(dataInizio);
+        const endDateObj = new Date(dataFine);
+
+        while (checkDate <= endDateObj) {
+            const checkStr = checkDate.toISOString().split('T')[0];
+            const conflitto = currentEmployeeAbsences.find(a => {
+                const dataEsistente = typeof a.data === 'string' ? a.data.split('T')[0] : new Date(a.data).toISOString().split('T')[0];
+                return dataEsistente === checkStr;
+            });
+
+            if (conflitto) {
+                const dataLeggibile = checkDate.toLocaleDateString('it-IT');
+                alert(`IMPOSSIBILE SALVARE:\nEsiste già un'assenza registrata per il giorno ${dataLeggibile} (${conflitto.tipo}).`);
+                return;
+            }
+            checkDate.setDate(checkDate.getDate() + 1);
+        }
+        // --- FINE CONTROLLO ---
 
         const btn = document.querySelector('#modalAssenze .btn-primary');
         const originalText = btn.innerText;
@@ -364,6 +385,8 @@
                 document.getElementById('dataFine').value = "";
                 document.getElementById('motivazione').value = "";
                 await caricaAssenzeDipendente(id);
+                // Ricarichiamo i dipendenti per aggiornare il residuo ferie nel DB se il backend lo ha scalato
+                caricaDipendenti(); 
             } else {
                 const err = await res.json();
                 alert("Errore: " + (err.error || "Impossibile salvare"));
@@ -376,7 +399,10 @@
         if(!confirm("Vuoi eliminare questa assenza?")) return;
         try {
             const res = await fetch(`/api/turni/assenza/${assenzaId}`, { method: 'DELETE' });
-            if (res.ok) await caricaAssenzeDipendente(dipId);
+            if (res.ok) {
+                await caricaAssenzeDipendente(dipId);
+                caricaDipendenti(); // Aggiorna il residuo generale
+            }
             else alert("Impossibile eliminare.");
         } catch (e) { alert("Errore connessione."); }
     }
