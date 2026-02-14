@@ -32,8 +32,7 @@ Queste sono le funzionalità da implementare nelle prossime iterazioni:
 1.  **UI e Filtri:**
     * [ ] Ottimizzazione del codice
     * [ ] Implementare Design Pattern
-  
-2. **Assenze, ferie e permessi**
-   * [ ] Eliminare rigenerazione settimana corrente
+2. **Turni**
+   * [ ] Ultime correzioni sulla generazione dei turni
 
 ---
