@@ -52,7 +52,7 @@
             width: 60px; padding: 5px; border: 1px solid #ced4da; border-radius: 4px; text-align: center;
         }
 
-        
+
         /* --- STILI GENERALI --- */
         .shift-card { position: relative; }
         .btn-delete-shift {
@@ -412,19 +412,79 @@
         document.getElementById('modalAggiungi').style.display = 'flex';
     }
 
-    async function salvaTurnoManuale() {
-        const dipId = document.getElementById('selectDipendente').value;
-        const data = document.getElementById('addDateValue').value;
-        const start = document.getElementById('addStart').value;
-        const end = document.getElementById('addEnd').value;
-        if(!dipId || !start || !end) { alert("Dati mancanti"); return; }
-        // check sovrapposizione omesso per brevità nel codice "completo" ma puoi rimetterlo se vuoi
-        const res = await fetch('/api/turni/manuale', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ dipendenteId: parseInt(dipId), data, oraInizio: start, oraFine: end })
-        });
-        if(res.ok) location.reload(); else alert("Errore salvataggio");
+   async function salvaTurnoManuale() {
+    const dipId = document.getElementById('selectDipendente').value;
+    const dataSelezionata = document.getElementById('addDateValue').value; // Es: "2026-02-14"
+    const startInput = document.getElementById('addStart').value;         // Es: "06:00"
+    const endInput = document.getElementById('addEnd').value;             // Es: "08:00"
+
+    if(!dipId || !startInput || !endInput) return alert("Dati mancanti");
+
+    // 1. Convertiamo l'input del modale in minuti totali della giornata
+    const [hIn, mIn] = startInput.split(':').map(Number);
+    const [hOut, mOut] = endInput.split(':').map(Number);
+    const minutiNuovoIn = hIn * 60 + mIn;
+    let minutiNuovoOut = hOut * 60 + mOut;
+    
+    // Gestione turno che scavalca la mezzanotte (es. 22:00 - 02:00)
+    if (minutiNuovoOut <= minutiNuovoIn) minutiNuovoOut += 1440;
+
+    // 2. Cerchiamo sovrapposizioni nei turni esistenti
+    const collisione = tuttiITurni.find(t => {
+        // Filtro per lo stesso dipendente
+        const stessoDip = (t.dipendente && t.dipendente.id == dipId);
+        // Filtro per lo stesso giorno (usando la tua funzione getYMD)
+        const stessoGiorno = (getYMD(t.data) === dataSelezionata);
+
+        if (stessoDip && stessoGiorno) {
+            let minutiEsistenteIn, minutiEsistenteOut;
+
+            // RILEVANTE: Controlliamo se l'ora è un numero (millisecondi) o una stringa "HH:mm"
+            if (typeof t.oraInizio === 'number') {
+                minutiEsistenteIn = Math.round(t.oraInizio / 1000 / 60);
+                minutiEsistenteOut = Math.round(t.oraFine / 1000 / 60);
+            } else {
+                const [ehIn, emIn] = t.oraInizio.split(':').map(Number);
+                const [ehOut, emOut] = t.oraFine.split(':').map(Number);
+                minutiEsistenteIn = ehIn * 60 + emIn;
+                minutiEsistenteOut = ehOut * 60 + emOut;
+            }
+
+            if (minutiEsistenteOut <= minutiEsistenteIn) minutiEsistenteOut += 1440;
+
+            // Formula universale di sovrapposizione:
+            // (Inizio1 < Fine2) E (Fine1 > Inizio2)
+            return (minutiNuovoIn < minutiEsistenteOut && minutiNuovoOut > minutiEsistenteIn);
+        }
+        return false;
+    });
+
+    if (collisione) {
+        return alert(`ERRORE: Non puoi assegnare ad un dipendente un orario in cui già lavora!`);
     }
+
+    // 3. Invio al server se non ci sono collisioni
+    try {
+        const res = await fetch('/api/turni/manuale', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ 
+                dipendenteId: parseInt(dipId), 
+                data: dataSelezionata, 
+                oraInizio: startInput, 
+                oraFine: endInput 
+            })
+        });
+        if(res.ok) {
+            location.reload(); 
+        } else {
+            const err = await res.json();
+            alert("Errore: " + (err.error || "Salvataggio fallito"));
+        }
+    } catch(e) { 
+        alert("Errore di connessione al database."); 
+    }
+}
 
     async function eliminaTurno(id) {
         if(confirm("Eliminare?")) { await fetch(`/api/turni/${id}`, { method: 'DELETE' }); location.reload(); }

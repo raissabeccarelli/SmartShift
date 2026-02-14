@@ -98,7 +98,7 @@
                         <strong id="statFerieGodute" class="stat-value val-ferie">0</strong>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">Ferie Residue (Database)</span>
+                        <span class="stat-label">Ferie Residue</span>
                         <strong id="statFerieResidue" class="stat-value val-residuo">0</strong>
                     </div>
                 </div>
@@ -226,25 +226,56 @@
         const oreSett = Number(document.getElementById('oreSett').value);
         const oreMax = Number(document.getElementById('oreMax').value);
 
-        if (!nome || !cognome || !oreSett || !oreMax) return alert("Compila tutti i campi");
+        // 1. Controllo campi vuoti
+        if (!nome || !cognome || !oreSett || !oreMax) {
+            return alert("Compila tutti i campi");
+        }
 
-        const dip = { id: id ? id : null, nome, cognome, oreSettimanaliContratto: oreSett, oreGiornaliereMax: oreMax };
+        // 2. Controllo Limiti Ore (Validazione Logica)
+        if (oreSett > 40) {
+            return alert("Errore: Il contratto non può superare le 40 ore settimanali.");
+        }
+        if (oreSett <= 0) {
+            return alert("Errore: Le ore settimanali devono essere maggiori di 0.");
+        }
+        if (oreMax > 8) {
+            return alert("Errore: Il limite giornaliero non può superare le 8 ore.");
+        }
+        if (oreMax <= 0) {
+            return alert("Errore: Il limite giornaliero deve essere maggiore di 0.");
+        }
+
+        const dip = { 
+            id: id ? id : null, 
+            nome, 
+            cognome, 
+            oreSettimanaliContratto: oreSett, 
+            oreGiornaliereMax: oreMax 
+        };
+
         try {
             const res = await fetch('/api/turni/dipendenti', {
-                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dip)
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify(dip)
             });
-            if(res.ok) { chiudiModals(); caricaDipendenti(); } 
+            if(res.ok) { 
+                chiudiModals(); 
+                caricaDipendenti(); 
+            } 
             else alert("Errore salvataggio");
-        } catch (e) { alert("Errore connessione"); }
-    }
+        } catch (e) { 
+            alert("Errore connessione"); 
+        }
+     }
 
-    // --- ASSENZE ---
+        // --- ASSENZE ---
     function aggiornaDataFine() {
         const inizio = document.getElementById('dataInizio').value;
         const fineInput = document.getElementById('dataFine');
         if (inizio) {
             if (!fineInput.value || fineInput.value < inizio) {
-                fineInput.value = inizio;
+                  fineInput.value = inizio;
             }
         }
     }
@@ -270,62 +301,66 @@
     }
 
     async function caricaAssenzeDipendente(dipId) {
-        const tbody = document.getElementById('listaAssenzeStorico');
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Caricamento...</td></tr>';
+    const tbody = document.getElementById('listaAssenzeStorico');
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Caricamento...</td></tr>';
 
-        try {
-            const res = await fetch('/api/turni/assenze');
-            const tutteAssenze = await res.json();
+    try {
+        const res = await fetch('/api/turni/assenze');
+        const tutteAssenze = await res.json();
 
-            const assenzeDip = tutteAssenze.filter(a => {
-                const aId = a.dipendente ? a.dipendente.id : (a.dipendenteId || a.dipendente_id);
-                return aId == dipId;
-            });
+        // Filtro per ID dipendente
+        const assenzeDip = tutteAssenze.filter(a => {
+            const aId = a.dipendente ? a.dipendente.id : (a.dipendenteId || a.dipendente_id);
+            return aId == dipId;
+        });
+        
+        currentEmployeeAbsences = assenzeDip;
+        assenzeDip.sort((a, b) => new Date(b.data) - new Date(a.data));
+
+        tbody.innerHTML = '';
+        if (assenzeDip.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999;">Nessuna assenza.</td></tr>';
+            return; // Esci se non ci sono dati
+        }
+
+        let ferieGodute = 0;
+        let malattiaCount = 0;
+        let permessoCount = 0;
+
+        assenzeDip.forEach(a => {
+            // Conta le tipologie per le statistiche
+            if (a.tipo === 'FERIE') ferieGodute++;
+            else if (a.tipo === 'MALATTIA') malattiaCount++;
+            else if (a.tipo === 'PERMESSO') permessoCount++;
             
-            currentEmployeeAbsences = assenzeDip;
-            assenzeDip.sort((a, b) => new Date(b.data) - new Date(a.data));
+            // Formattazione data
+            const dataObj = new Date(a.data);
+            const dataFmt = isNaN(dataObj) ? a.data : dataObj.toLocaleDateString('it-IT');
 
-            tbody.innerHTML = '';
-            if (assenzeDip.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999;">Nessuna assenza.</td></tr>';
-            }
+            const mot = a.motivazione || a.note || "-";
 
-            // Contatori solo per statistica "Godute"
-            let ferieGodute = 0;
-            let malattiaCount = 0;
-            let permessoCount = 0;
+            tbody.innerHTML += `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 8px;">${dataFmt}</td>
+                    <td style="padding: 8px;">${a.tipo}</td>
+                    <td style="padding: 8px;"><small style="color:#666;">${mot}</small></td>
+                    <td style="padding: 8px; text-align: center;">
+                        <button class="btn-sm" style="background:transparent; color:red; border:none; cursor:pointer; font-weight:bold; font-size:1.2em;" 
+                            onclick="eliminaAssenza(${a.id}, ${dipId})" title="Elimina">&times;</button>
+                    </td>
+                </tr>
+            `;
+        });
 
-            assenzeDip.forEach(a => {
-                if (a.tipo === 'FERIE') ferieGodute++;
-                else if (a.tipo === 'MALATTIA') malattiaCount++;
-                else if (a.tipo === 'PERMESSO') permessoCount++;
-                
-                const dataObj = new Date(a.data);
-                const dataFmt = isNaN(dataObj) ? a.data : dataObj.toLocaleDateString('it-IT');
+        // Aggiornamento box statistiche
+        document.getElementById('statFerieGodute').innerText = ferieGodute;
+        document.getElementById('statMalattia').innerText = malattiaCount;
+        document.getElementById('statPermessi').innerText = permessoCount;
 
-                const mot = a.motivazione || a.note || "";
-                const noteTxt = mot ? `<small style="color:#666;">${mot}</small>` : '-';
-
-                tbody.innerHTML += `
-                    <tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding: 8px;">${dataFmt}</td>
-                        <td style="padding: 8px;">${icon} ${a.tipo}</td>
-                        <td style="padding: 8px;">${noteTxt}</td>
-                        <td style="padding: 8px; text-align: center;">
-                            <button class="btn-sm" style="background:transparent; color:red; border:none; cursor:pointer; font-weight:bold; font-size:1.2em;" 
-                                onclick="eliminaAssenza(${a.id}, ${dipId})" title="Elimina">&times;</button>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            // MODIFICA 3: Mostriamo solo le godute e gli altri contatori.
-            // NON calcoliamo più il residuo qui, perché lo abbiamo già settato in apriAssenze
-            document.getElementById('statFerieGodute').innerText = ferieGodute;
-            document.getElementById('statMalattia').innerText = malattiaCount;
-            document.getElementById('statPermessi').innerText = permessoCount;
-
-        } catch (e) { console.error(e); }
+        } catch (e) { 
+            console.error("Errore:", e); 
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Errore nel caricamento.</td></tr>';
+        }
     }
 
     async function salvaAssenza() {
