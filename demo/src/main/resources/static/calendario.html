@@ -214,16 +214,40 @@
         const weeks = getNextWeeks();
         const container = document.getElementById('lista-settimane');
         container.innerHTML = '';
-        weeks.forEach(week => {
+        
+        // Aggiungiamo 'index' come secondo parametro per sapere a che settimana siamo
+        weeks.forEach((week, index) => {
             const hasShifts = tuttiITurni.some(t => getYMD(t.data) >= week.startStr && getYMD(t.data) <= week.endStr);
             const div = document.createElement('div');
             div.className = `week-card ${hasShifts ? 'generated' : 'empty'}`;
-            let buttonsHtml = hasShifts ? `
-                <button class="btn-primary" onclick="apriTurni('${week.startStr}', '${week.endStr}', false)">👁️ Vedi</button>
-                <button class="btn-secondary" onclick="apriTurni('${week.startStr}', '${week.endStr}', true)">✏️ Modifica</button>
-                <button class="btn-warning" onclick="apriConfigurazioneGenerazione('${week.startStr}')">🔄 Ricalcola</button>
-            ` : `<button class="btn-success" onclick="apriConfigurazioneGenerazione('${week.startStr}')">Genera Turni</button>`;
-            div.innerHTML = `<div><h3>Settimana ${week.label}</h3><span style="color:${hasShifts?'green':'red'}">${hasShifts?'Pianificata':'Da Pianificare'}</span></div><div style="display:flex;gap:5px;">${buttonsHtml}</div>`;
+            
+            let buttonsHtml = '';
+
+            if (hasShifts) {
+                // Pulsanti standard sempre visibili se ci sono turni
+                buttonsHtml += `<button class="btn-primary" onclick="apriTurni('${week.startStr}', '${week.endStr}', false)">👁️ Vedi</button> `;
+                buttonsHtml += `<button class="btn-secondary" onclick="apriTurni('${week.startStr}', '${week.endStr}', true)">✏️ Modifica</button> `;
+                
+                // IL BOTTONE RICALCOLA APPARE SOLO SE NON È LA SETTIMANA CORRENTE (index > 0)
+                if (index > 0) {
+                    buttonsHtml += `<button class="btn-warning" onclick="apriConfigurazioneGenerazione('${week.startStr}')">🔄 Ricalcola</button>`;
+                }
+            } else {
+                // Se non ci sono turni, mostriamo il tasto per generarli (anche se è la settimana corrente, se è vuota bisogna pur riempirla)
+                buttonsHtml = `<button class="btn-success" onclick="apriConfigurazioneGenerazione('${week.startStr}')">Genera Turni</button>`;
+            }
+
+            div.innerHTML = `
+                <div>
+                    <h3>Settimana ${week.label}</h3>
+                    <span style="color:${hasShifts?'green':'red'}">
+                        ${hasShifts ? (index === 0 ? 'In Corso' : 'Pianificata') : 'Da Pianificare'}
+                    </span>
+                </div>
+                <div style="display:flex; gap:5px;">
+                    ${buttonsHtml}
+                </div>`;
+            
             container.appendChild(div);
         });
     }
