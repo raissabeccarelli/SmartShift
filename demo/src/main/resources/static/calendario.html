@@ -24,7 +24,7 @@
             padding: 8px; margin: 5px 0; border-radius: 6px; font-size: 0.85em; text-align: center;
         }
 
-        /* --- NUOVO STILE DIVISORI FASCE --- */
+        /* --- STILI DIVISORI FASCE --- */
         .slot-divider {
             background-color: #f8f9fa;
             color: #6c757d;
@@ -131,18 +131,24 @@
             <h3 style="color: #6f42c1;">⚙️ Configura Generazione</h3>
             <p>Imposta il numero <strong>minimo</strong> di dipendenti per fascia oraria.</p>
             <input type="hidden" id="configDateValue">
+            
             <div class="config-row">
-                <label>Mattina (06:00 - 12:00)</label>
+                <label>Mattina (08:00 - 12:00)</label>
                 <input type="number" id="confMattina" class="config-input" value="3" min="0">
             </div>
             <div class="config-row">
-                <label>Pomeriggio (12:00 - 18:00)</label>
+                <label>Pomeriggio (12:00 - 16:00)</label>
                 <input type="number" id="confPomeriggio" class="config-input" value="4" min="0">
             </div>
             <div class="config-row">
-                <label>Sera (18:00 - 23:00)</label>
-                <input type="number" id="confSera" class="config-input" value="5" min="0">
+                <label>Sera (16:00 - 20:00)</label>
+                <input type="number" id="confSera" class="config-input" value="4" min="0">
             </div>
+            <div class="config-row">
+                <label>Notte (20:00 - 24:00)</label>
+                <input type="number" id="confNotte" class="config-input" value="2" min="0">
+            </div>
+
             <div style="text-align: right; margin-top: 20px;">
                 <button class="btn-secondary" onclick="chiudiModal('modalConfigura')">Annulla</button>
                 <button class="btn-primary" onclick="confermaGenerazione()">Genera Turni</button>
@@ -156,7 +162,7 @@
     let tuttiITurni = [];
     let tuttiDipendenti = [];
     let tutteAssenze = [];
-    let configSlot = []; // Carenze di default
+    let configSlot = []; 
     let viewState = { start: null, end: null, edit: false };
 
     // FUNZIONI UTILITA
@@ -215,25 +221,19 @@
         const container = document.getElementById('lista-settimane');
         container.innerHTML = '';
         
-        // Aggiungiamo 'index' come secondo parametro per sapere a che settimana siamo
         weeks.forEach((week, index) => {
             const hasShifts = tuttiITurni.some(t => getYMD(t.data) >= week.startStr && getYMD(t.data) <= week.endStr);
             const div = document.createElement('div');
             div.className = `week-card ${hasShifts ? 'generated' : 'empty'}`;
             
             let buttonsHtml = '';
-
             if (hasShifts) {
-                // Pulsanti standard sempre visibili se ci sono turni
                 buttonsHtml += `<button class="btn-primary" onclick="apriTurni('${week.startStr}', '${week.endStr}', false)">👁️ Vedi</button> `;
                 buttonsHtml += `<button class="btn-secondary" onclick="apriTurni('${week.startStr}', '${week.endStr}', true)">✏️ Modifica</button> `;
-                
-                // IL BOTTONE RICALCOLA APPARE SOLO SE NON È LA SETTIMANA CORRENTE (index > 0)
                 if (index > 0) {
                     buttonsHtml += `<button class="btn-warning" onclick="apriConfigurazioneGenerazione('${week.startStr}')">🔄 Ricalcola</button>`;
                 }
             } else {
-                // Se non ci sono turni, mostriamo il tasto per generarli (anche se è la settimana corrente, se è vuota bisogna pur riempirla)
                 buttonsHtml = `<button class="btn-success" onclick="apriConfigurazioneGenerazione('${week.startStr}')">Genera Turni</button>`;
             }
 
@@ -252,33 +252,44 @@
         });
     }
 
-    // --- LOGICA MODALE GENERAZIONE ---
+    // --- LOGICA MODALE GENERAZIONE (AGGIORNATA) ---
     function apriConfigurazioneGenerazione(dataStart) {
         document.getElementById('configDateValue').value = dataStart;
         document.getElementById('modalConfigura').style.display = 'flex';
     }
+
     async function confermaGenerazione() {
         const data = document.getElementById('configDateValue').value;
         const minM = document.getElementById('confMattina').value;
         const minP = document.getElementById('confPomeriggio').value;
         const minS = document.getElementById('confSera').value;
-        if(!data || minM < 0) { alert("Dati non validi"); return; }
+        // Recuperiamo il valore della Notte
+        const minN = document.getElementById('confNotte').value;
+
+        if(!data || minM < 0 || minN < 0) { alert("Dati non validi"); return; }
 
         const btn = document.querySelector('#modalConfigura .btn-primary');
         const originalText = btn.innerText; btn.innerText = "Generazione..."; btn.disabled = true;
         
         try {
+            // Invio 4 parametri al Backend
             const res = await fetch('/api/turni/genera', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ data, minMattina: parseInt(minM), minPomeriggio: parseInt(minP), minSera: parseInt(minS) })
+                body: JSON.stringify({ 
+                    data, 
+                    minMattina: parseInt(minM), 
+                    minPomeriggio: parseInt(minP), 
+                    minSera: parseInt(minS),
+                    minNotte: parseInt(minN) // <--- NUOVO CAMPO
+                })
             });
             if(res.ok) location.reload();
             else { alert("Errore generazione"); btn.innerText = originalText; btn.disabled = false; }
         } catch(e) { console.error(e); alert("Errore connessione"); btn.innerText = originalText; btn.disabled = false; }
     }
 
-    // --- LOGICA GRIGLIA TURNI CON DIVISORI ---
+    // --- LOGICA GRIGLIA TURNI CON 4 SLOT ---
     function aggiornaVistaTurni() { if(viewState.start) apriTurni(viewState.start, viewState.end, viewState.edit); }
 
     function apriTurni(startStr, endStr, isEditMode) {
@@ -290,21 +301,13 @@
         
         gridContainer.innerHTML = ''; 
         
-        // --- MODIFICA LOGICA TITOLO ---
         const dStart = new Date(startStr);
         const dEnd = new Date(endStr);
         const opts = { day: 'numeric', month: 'long', year: 'numeric' };
         
         const dataFormatted = `dal ${dStart.toLocaleDateString('it-IT', opts)} al ${dEnd.toLocaleDateString('it-IT', opts)}`;
-        
-        if (isEditMode) {
-            modalTitle.innerText = `Modifica settimana ${dataFormatted}`;
-            modalTitle.style.color = "#d63384"; // Colore magenta per edit
-        } else {
-            modalTitle.innerText = `Settimana ${dataFormatted}`;
-            modalTitle.style.color = "#333"; // Colore standard
-        }
-        // ------------------------------
+        modalTitle.innerText = isEditMode ? `Modifica settimana ${dataFormatted}` : `Settimana ${dataFormatted}`;
+        modalTitle.style.color = isEditMode ? "#d63384" : "#333";
 
         let oreMap = {};
         tuttiDipendenti.forEach(d => oreMap[d.id] = 0);
@@ -322,7 +325,8 @@
             const turniDelGiorno = tuttiITurni.filter(t => getYMD(t.data) === dateKey);
             turniDelGiorno.sort((a,b) => a.oraInizio.localeCompare(b.oraInizio));
 
-            // -- CARENZE (Mostriamo solo se non c'è filtro attivo) --
+            // -- CARENZE (Visualizzazione) --
+            // Questo blocco funziona automaticamente con i 4 slot restituiti dal backend
             let warningHtml = '';
             if(configSlot.length > 0 && idFiltro === "") {
                 configSlot.forEach(slot => {
@@ -342,7 +346,6 @@
                         if (attivi < slot.min) oreScoperte.push({h:currentHour, c:attivi});
                     }
                     if (oreScoperte.length > 0) {
-                         // Raggruppa ore contigue
                         let ranges = []; 
                         let sB = oreScoperte[0].h, cB = oreScoperte[0].c, pH = sB;
                         for (let k=1; k<oreScoperte.length; k++) {
@@ -357,9 +360,10 @@
                 });
             }
 
-            // -- DIVISORI FASCE E CARDS --
-            let htmlM='', htmlP='', htmlS='';
-            let cM=0, cP=0, cS=0;
+            // -- DIVISORI FASCE E CARDS (AGGIORNATO A 4 SLOT) --
+            // Variabili per i 4 bucket
+            let htmlM='', htmlP='', htmlS='', htmlN='';
+            let cM=0, cP=0, cS=0, cN=0;
 
             turniDelGiorno.forEach(t => {
                 if(idFiltro !== "" && t.dipendente.id != idFiltro) return;
@@ -374,25 +378,29 @@
                     </div>`;
                 
                 let hStart = parseInt(t.oraInizio.split(':')[0]);
-                if(hStart < 12) { htmlM+=card; cM++; }
-                else if(hStart < 18) { htmlP+=card; cP++; }
-                else { htmlS+=card; cS++; }
+                
+                // LOGICA DI SMISTAMENTO AGGIORNATA
+                if(hStart < 12) { htmlM+=card; cM++; }       // Fino alle 12 (Mattina)
+                else if(hStart < 16) { htmlP+=card; cP++; }  // 12-16 (Pomeriggio)
+                else if(hStart < 20) { htmlS+=card; cS++; }  // 16-20 (Sera)
+                else { htmlN+=card; cN++; }                  // 20+ (Notte)
             });
 
             const emptyPl = `<div class="slot-empty-placeholder">-</div>`;
             let dailyBody = '';
             
-            // Renderizziamo sempre le fasce per struttura
-            dailyBody += `<div class="slot-divider">Mattina <small>(06-12)</small></div>` + (cM > 0 ? htmlM : emptyPl);
-            dailyBody += `<div class="slot-divider">Pomeriggio <small>(12-18)</small></div>` + (cP > 0 ? htmlP : emptyPl);
-            dailyBody += `<div class="slot-divider">Sera <small>(18-23)</small></div>` + (cS > 0 ? htmlS : emptyPl);
+            // Renderizziamo i 4 blocchi
+            dailyBody += `<div class="slot-divider">Mattina <small>(08-12)</small></div>` + (cM > 0 ? htmlM : emptyPl);
+            dailyBody += `<div class="slot-divider">Pomeriggio <small>(12-16)</small></div>` + (cP > 0 ? htmlP : emptyPl);
+            dailyBody += `<div class="slot-divider">Sera <small>(16-20)</small></div>` + (cS > 0 ? htmlS : emptyPl);
+            dailyBody += `<div class="slot-divider">Notte <small>(20-24)</small></div>` + (cN > 0 ? htmlN : emptyPl);
 
             const addBtn = isEditMode ? `<button class="btn-add-slot" onclick="apriModalAggiungi('${dateKey}', '${startStr}', '${endStr}')">+ Aggiungi</button>` : '';
-            const opts = { weekday: 'short', day: '2-digit', month: '2-digit' };
+            const optsDay = { weekday: 'short', day: '2-digit', month: '2-digit' };
 
             gridContainer.innerHTML += `
                 <div class="day-column">
-                    <div class="day-header">${currentDay.toLocaleDateString('it-IT', opts)}</div>
+                    <div class="day-header">${currentDay.toLocaleDateString('it-IT', optsDay)}</div>
                     <div class="day-body">${warningHtml}${dailyBody}${addBtn}</div>
                 </div>`;
             currentDay.setDate(currentDay.getDate() + 1);
@@ -400,6 +408,8 @@
         modal.style.display = 'flex';
     }
 
+    // (Il resto delle funzioni di modale aggiunta e salvataggio manuale rimangono uguali, 
+    // perché lavorano con input orari generici e non dipendono dagli slot fissi)
     function apriModalAggiungi(dataTarget, weekStart, weekEnd) {
         document.getElementById('addDateValue').value = dataTarget;
         document.getElementById('addDateLabel').innerText = dataTarget;
@@ -436,79 +446,53 @@
         document.getElementById('modalAggiungi').style.display = 'flex';
     }
 
-   async function salvaTurnoManuale() {
-    const dipId = document.getElementById('selectDipendente').value;
-    const dataSelezionata = document.getElementById('addDateValue').value; // Es: "2026-02-14"
-    const startInput = document.getElementById('addStart').value;         // Es: "06:00"
-    const endInput = document.getElementById('addEnd').value;             // Es: "08:00"
+    async function salvaTurnoManuale() {
+        const dipId = document.getElementById('selectDipendente').value;
+        const dataSelezionata = document.getElementById('addDateValue').value; 
+        const startInput = document.getElementById('addStart').value; 
+        const endInput = document.getElementById('addEnd').value; 
 
-    if(!dipId || !startInput || !endInput) return alert("Dati mancanti");
+        if(!dipId || !startInput || !endInput) return alert("Dati mancanti");
 
-    // 1. Convertiamo l'input del modale in minuti totali della giornata
-    const [hIn, mIn] = startInput.split(':').map(Number);
-    const [hOut, mOut] = endInput.split(':').map(Number);
-    const minutiNuovoIn = hIn * 60 + mIn;
-    let minutiNuovoOut = hOut * 60 + mOut;
-    
-    // Gestione turno che scavalca la mezzanotte (es. 22:00 - 02:00)
-    if (minutiNuovoOut <= minutiNuovoIn) minutiNuovoOut += 1440;
+        const [hIn, mIn] = startInput.split(':').map(Number);
+        const [hOut, mOut] = endInput.split(':').map(Number);
+        const minutiNuovoIn = hIn * 60 + mIn;
+        let minutiNuovoOut = hOut * 60 + mOut;
+        if (minutiNuovoOut <= minutiNuovoIn) minutiNuovoOut += 1440;
 
-    // 2. Cerchiamo sovrapposizioni nei turni esistenti
-    const collisione = tuttiITurni.find(t => {
-        // Filtro per lo stesso dipendente
-        const stessoDip = (t.dipendente && t.dipendente.id == dipId);
-        // Filtro per lo stesso giorno (usando la tua funzione getYMD)
-        const stessoGiorno = (getYMD(t.data) === dataSelezionata);
+        const collisione = tuttiITurni.find(t => {
+            const stessoDip = (t.dipendente && t.dipendente.id == dipId);
+            const stessoGiorno = (getYMD(t.data) === dataSelezionata);
 
-        if (stessoDip && stessoGiorno) {
-            let minutiEsistenteIn, minutiEsistenteOut;
-
-            // RILEVANTE: Controlliamo se l'ora è un numero (millisecondi) o una stringa "HH:mm"
-            if (typeof t.oraInizio === 'number') {
-                minutiEsistenteIn = Math.round(t.oraInizio / 1000 / 60);
-                minutiEsistenteOut = Math.round(t.oraFine / 1000 / 60);
-            } else {
-                const [ehIn, emIn] = t.oraInizio.split(':').map(Number);
-                const [ehOut, emOut] = t.oraFine.split(':').map(Number);
-                minutiEsistenteIn = ehIn * 60 + emIn;
-                minutiEsistenteOut = ehOut * 60 + emOut;
+            if (stessoDip && stessoGiorno) {
+                let minutiEsistenteIn, minutiEsistenteOut;
+                if (typeof t.oraInizio === 'number') {
+                    minutiEsistenteIn = Math.round(t.oraInizio / 1000 / 60);
+                    minutiEsistenteOut = Math.round(t.oraFine / 1000 / 60);
+                } else {
+                    const [ehIn, emIn] = t.oraInizio.split(':').map(Number);
+                    const [ehOut, emOut] = t.oraFine.split(':').map(Number);
+                    minutiEsistenteIn = ehIn * 60 + emIn;
+                    minutiEsistenteOut = ehOut * 60 + emOut;
+                }
+                if (minutiEsistenteOut <= minutiEsistenteIn) minutiEsistenteOut += 1440;
+                return (minutiNuovoIn < minutiEsistenteOut && minutiNuovoOut > minutiEsistenteIn);
             }
-
-            if (minutiEsistenteOut <= minutiEsistenteIn) minutiEsistenteOut += 1440;
-
-            // Formula universale di sovrapposizione:
-            // (Inizio1 < Fine2) E (Fine1 > Inizio2)
-            return (minutiNuovoIn < minutiEsistenteOut && minutiNuovoOut > minutiEsistenteIn);
-        }
-        return false;
-    });
-
-    if (collisione) {
-        return alert(`ERRORE: Non puoi assegnare ad un dipendente un orario in cui già lavora!`);
-    }
-
-    // 3. Invio al server se non ci sono collisioni
-    try {
-        const res = await fetch('/api/turni/manuale', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ 
-                dipendenteId: parseInt(dipId), 
-                data: dataSelezionata, 
-                oraInizio: startInput, 
-                oraFine: endInput 
-            })
+            return false;
         });
-        if(res.ok) {
-            location.reload(); 
-        } else {
-            const err = await res.json();
-            alert("Errore: " + (err.error || "Salvataggio fallito"));
-        }
-    } catch(e) { 
-        alert("Errore di connessione al database."); 
+
+        if (collisione) return alert(`ERRORE: Sovrapposizione oraria!`);
+
+        try {
+            const res = await fetch('/api/turni/manuale', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ dipendenteId: parseInt(dipId), data: dataSelezionata, oraInizio: startInput, oraFine: endInput })
+            });
+            if(res.ok) location.reload(); 
+            else { const err = await res.json(); alert("Errore: " + (err.error || "Salvataggio fallito")); }
+        } catch(e) { alert("Errore connessione."); }
     }
-}
 
     async function eliminaTurno(id) {
         if(confirm("Eliminare?")) { await fetch(`/api/turni/${id}`, { method: 'DELETE' }); location.reload(); }

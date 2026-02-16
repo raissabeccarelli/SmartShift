@@ -39,21 +39,29 @@ public class TurnoController {
         return ResponseEntity.ok(turnoService.getConfigurazioneSlot());
     }
 
-    // --- 1. GENERAZIONE ---
+    // --- 1. GENERAZIONE (MODIFICATO PER 4 SLOT) ---
     public static class GenerazioneRequest {
         private String data;
         private int minMattina;
         private int minPomeriggio;
         private int minSera;
+        private int minNotte; // <--- NUOVO CAMPO
 
         public String getData() { return data; }
         public void setData(String data) { this.data = data; }
+        
         public int getMinMattina() { return minMattina; }
         public void setMinMattina(int minMattina) { this.minMattina = minMattina; }
+        
         public int getMinPomeriggio() { return minPomeriggio; }
         public void setMinPomeriggio(int minPomeriggio) { this.minPomeriggio = minPomeriggio; }
+        
         public int getMinSera() { return minSera; }
         public void setMinSera(int minSera) { this.minSera = minSera; }
+        
+        // <--- NUOVI GETTER E SETTER
+        public int getMinNotte() { return minNotte; }
+        public void setMinNotte(int minNotte) { this.minNotte = minNotte; }
     }
 
     @PostMapping("/genera")
@@ -63,7 +71,15 @@ public class TurnoController {
             LocalDate start = LocalDate.parse(req.getData());
             LocalDate lunedi = start.with(java.time.DayOfWeek.MONDAY);
             
-            turnoService.generaTurniPerSettimana(lunedi, req.getMinMattina(), req.getMinPomeriggio(), req.getMinSera());
+            // --- MODIFICA QUI: PASSATI 4 PARAMETRI ---
+            turnoService.generaTurniPerSettimana(
+                lunedi, 
+                req.getMinMattina(), 
+                req.getMinPomeriggio(), 
+                req.getMinSera(), 
+                req.getMinNotte() // Passiamo il valore notte
+            );
+            
             return ResponseEntity.ok(Map.of("message", "Turni generati per la settimana del " + lunedi));
         } catch (Exception e) {
             e.printStackTrace(); 
@@ -114,11 +130,11 @@ public class TurnoController {
         }
     }
 
-    // --- 4. GESTIONE ASSENZE (AGGIORNATO PER RANGE DI DATE) ---
+    // --- 4. GESTIONE ASSENZE ---
     public static class AssenzaRequest {
         public Long dipendenteId;
-        public String dataInizio; // Modificato: Da singola data a Inizio
-        public String dataFine;   // Aggiunto: Fine
+        public String dataInizio;
+        public String dataFine;
         public String tipo;
         public String motivazione;
     }
@@ -136,19 +152,17 @@ public class TurnoController {
             Dipendente dip = dipendenteRepository.findById(req.dipendenteId)
                     .orElseThrow(() -> new RuntimeException("Dipendente non trovato"));
 
-            // CICLO: Inseriamo una riga nel DB per ogni giorno compreso tra start ed end
             LocalDate current = start;
             while (!current.isAfter(end)) {
-                Assenza a = new Assenza();
-                a.setDipendente(dip);
-                a.setData(current); // Data del singolo giorno
-                a.setTipo(req.tipo);
-                // Usiamo setMotivazione come richiesto
-                a.setMotivazione(req.motivazione); 
-
-                assenzaRepository.save(a);
-                
-                // Avanziamo di un giorno
+                // Controllo se esiste già un'assenza per evitare duplicati (Opzionale ma consigliato)
+                if (assenzaRepository.findByDipendenteAndData(dip, current).isEmpty()) {
+                    Assenza a = new Assenza();
+                    a.setDipendente(dip);
+                    a.setData(current);
+                    a.setTipo(req.tipo);
+                    a.setMotivazione(req.motivazione); 
+                    assenzaRepository.save(a);
+                }
                 current = current.plusDays(1);
             }
 
@@ -164,7 +178,6 @@ public class TurnoController {
         return assenzaRepository.findAll();
     }
 
-    // Metodo per eliminare le assenze (che mancava prima)
     @DeleteMapping("/assenza/{id}")
     public ResponseEntity<?> eliminaAssenza(@PathVariable Long id) {
         if (assenzaRepository.existsById(id)) {
