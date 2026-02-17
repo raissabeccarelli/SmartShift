@@ -179,7 +179,7 @@ public class TurnoService {
     }
 
     @Transactional
-    private boolean tentaAssegnazioneTurno(Dipendente d, LocalDate data, LocalTime inizio, LocalTime fine) {
+    boolean tentaAssegnazioneTurno(Dipendente d, LocalDate data, LocalTime inizio, LocalTime fine) {
         // 1. Validazione Regole Strategy
         for (ShiftRule rule : rules) {
             if (!rule.isValid(d, data, inizio, fine)) return false; 
