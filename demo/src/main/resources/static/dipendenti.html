@@ -74,10 +74,14 @@
         <input type="text" id="nome">
         <label>Cognome</label>
         <input type="text" id="cognome">
-        <label>Ore Settimanali</label>
-        <input type="number" id="oreSett" min="0" max="40">
-        <label>Max Ore Giornaliere</label>
-        <input type="number" id="oreMax" min="0" max="8">
+        <label>Tipo Contratto</label>
+        <select id="tipoContratto" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+            <option value="FULL_TIME">Full Time</option>
+            <option value="PART_TIME">Part Time</option>
+        </select>
+
+<input type="hidden" id="oreSett">
+<input type="hidden" id="oreMax">
         
         <button class="btn-primary" onclick="salvaDipendente()">Salva</button>
     </div>
@@ -208,14 +212,24 @@
         document.getElementById('editId').value = d.id;
         document.getElementById('nome').value = d.nome;
         document.getElementById('cognome').value = d.cognome;
-        document.getElementById('oreSett').value = d.oreSettimanaliContratto;
-        document.getElementById('oreMax').value = d.oreGiornaliereMax;
 
+        // Seleziona automaticamente l'opzione corretta nel menu a tendina
+        const selectContratto = document.getElementById('tipoContratto');
+        if (d.oreSettimanaliContratto >= 40) {
+            selectContratto.value = "FULL_TIME";
+        } else {
+            selectContratto.value = "PART_TIME";
+        }
+
+        // Gestione campi nome e cognome (sola lettura in modifica)
         const nomeIn = document.getElementById('nome');
         const cognIn = document.getElementById('cognome');
-        nomeIn.readOnly = true; cognIn.readOnly = true;
-        nomeIn.style.backgroundColor = "#e9ecef"; cognIn.style.backgroundColor = "#e9ecef";
+        nomeIn.readOnly = true; 
+        cognIn.readOnly = true;
+        nomeIn.style.backgroundColor = "#e9ecef"; 
+        cognIn.style.backgroundColor = "#e9ecef";
 
+        // Mostra il modal
         document.getElementById('modalDipendente').style.display = 'flex';
     }
 
@@ -223,26 +237,20 @@
         const id = document.getElementById('editId').value;
         const nome = document.getElementById('nome').value;
         const cognome = document.getElementById('cognome').value;
-        const oreSett = Number(document.getElementById('oreSett').value);
-        const oreMax = Number(document.getElementById('oreMax').value);
+        const tipoContratto = document.getElementById('tipoContratto').value;
 
-        // 1. Controllo campi vuoti
-        if (!nome || !cognome || !oreSett || !oreMax) {
-            return alert("Compila tutti i campi");
+        // Logica di assegnazione automatica
+        let oreSett, oreMax;
+        if (tipoContratto === "FULL_TIME") {
+            oreSett = 40;
+            oreMax = 8;
+        } else {
+            oreSett = 20;
+            oreMax = 4;
         }
 
-        // 2. Controllo Limiti Ore (Validazione Logica)
-        if (oreSett > 40) {
-            return alert("Errore: Il contratto non può superare le 40 ore settimanali.");
-        }
-        if (oreSett <= 0) {
-            return alert("Errore: Le ore settimanali devono essere maggiori di 0.");
-        }
-        if (oreMax > 8) {
-            return alert("Errore: Il limite giornaliero non può superare le 8 ore.");
-        }
-        if (oreMax <= 0) {
-            return alert("Errore: Il limite giornaliero deve essere maggiore di 0.");
+        if (!nome || !cognome) {
+            return alert("Compila nome e cognome");
         }
 
         const dip = { 

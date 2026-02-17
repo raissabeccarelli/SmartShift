@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -26,11 +25,9 @@ public class TurnoService {
     @Autowired private TurnoRepository turnoRepository;
     @Autowired private AssenzaRepository assenzaRepository;
 
-    // INIEZIONE STRATEGY: Spring trova automaticamente le 3 regole create sopra
     @Autowired
     private List<ShiftRule> rules;
 
-    // Classe interna per configurazione
     private static class ConfigurazioneSlot {
         LocalTime inizio;
         LocalTime fine;
@@ -43,12 +40,11 @@ public class TurnoService {
         }
     }
 
-    // Configurazione predefinita aggiornata con il 4° slot (Notte)
     private List<ConfigurazioneSlot> currentConfig = new ArrayList<>(List.of(
-        new ConfigurazioneSlot(8, 12, 3),   // Mattina
-        new ConfigurazioneSlot(12, 16, 4),  // Pomeriggio
-        new ConfigurazioneSlot(16, 20, 4),  // Sera
-        new ConfigurazioneSlot(20, 24, 2)   // Notte
+        new ConfigurazioneSlot(8, 12, 3),   
+        new ConfigurazioneSlot(12, 16, 4),  
+        new ConfigurazioneSlot(16, 20, 4),  
+        new ConfigurazioneSlot(20, 24, 2)   
     ));
 
     public List<Map<String, Object>> getConfigurazioneSlot() {
@@ -74,7 +70,7 @@ public class TurnoService {
 
         if (tipo.equalsIgnoreCase("FERIE")) {
             if (d.getFerieResidue() < giorniRichiesti) {
-                throw new RuntimeException("ERRORE: Ferie insufficienti! Hai " + d.getFerieResidue() + " giorni.");
+                throw new RuntimeException("ERRORE: Ferie insufficienti!");
             }
             d.setFerieResidue(d.getFerieResidue() - (int) giorniRichiesti);
             dipendenteRepository.save(d);
@@ -93,17 +89,14 @@ public class TurnoService {
         }
     }
 
-    // --- METODO AGGIORNATO CON 4 PARAMETRI ---
-    // ... imports e codice precedente ...
-
     @Transactional
     public void generaTurniPerSettimana(LocalDate dataInizio, int minMattina, int minPomeriggio, int minSera, int minNotte) {
         LocalDate dataFine = dataInizio.plusDays(6);
-
+        
+        // Pulizia turni esistenti nel range
         turnoRepository.deleteTurniInRange(dataInizio, dataFine);
         turnoRepository.flush(); 
 
-        // Recuperiamo tutti i dipendenti
         List<Dipendente> tuttiDipendenti = dipendenteRepository.findAll();
 
         List<ConfigurazioneSlot> slotsDinamici = List.of(
@@ -117,131 +110,109 @@ public class TurnoService {
 
         for (LocalDate data = dataInizio; !data.isAfter(dataFine); data = data.plusDays(1)) {
             
-            // Per ogni slot della giornata...
+            // Risoluzione errore: creiamo una costante per la data del ciclo corrente
+            final LocalDate dataCorrente = data; 
+
             for (ConfigurazioneSlot slot : slotsDinamici) {
                 
-                // --- LOGICA DI CONTINUITÀ ---
-                // Dividiamo i dipendenti in due liste:
-                // 1. "Prioritari": Chi ha finito un turno ESATTAMENTE quando inizia questo slot
-                // 2. "Altri": Chi non sta lavorando o ha lavorato ore fa
-                
                 List<Dipendente> prioritari = new ArrayList<>();
-                List<Dipendente> altri = new ArrayList<>(tuttiDipendenti); // Copia della lista completa
-
-                // Cerchiamo chi è prioritario
-                // Nota: È meglio farlo fuori dal sort per evitare troppe query al DB
-                List<Dipendente> daSpostare = new ArrayList<>();
+                List<Dipendente> altri = new ArrayList<>();
                 
-                for (Dipendente d : altri) {
-                    if (haFinitoTurnoAlle(d, data, slot.inizio)) {
-                        daSpostare.add(d);
+                for (Dipendente d : tuttiDipendenti) {
+                    // Controllo chi ha finito il turno esattamente all'inizio del nuovo slot
+                    if (haFinitoTurnoAlle(d, dataCorrente, slot.inizio)) {
+                        prioritari.add(d);
+                    } else {
+                        altri.add(d);
                     }
                 }
-                
-                // Rimuoviamo i prioritari dalla lista "altri" e li mettiamo in "prioritari"
-                altri.removeAll(daSpostare);
-                prioritari.addAll(daSpostare);
 
-                // Mischiamo SOLO la lista "altri" per garantire rotazione tra chi non è in continuità
-                Collections.shuffle(altri);
+                // --- ORDINAMENTO EQUO ---
+                // Usiamo dataCorrente perché è all'interno di una Lambda
+                altri.sort((d1, d2) -> {
+                    double perc1 = getPercentualeLavoroSettimanale(d1, dataInizio, dataCorrente);
+                    double perc2 = getPercentualeLavoroSettimanale(d2, dataInizio, dataCorrente);
+                    return Double.compare(perc1, perc2);
+                });
 
-                // Costruiamo la lista finale ordinata: PRIMA chi deve continuare, POI gli altri
+                // Uniamo le liste: prima chi deve dare continuità, poi chi ha lavorato meno
                 List<Dipendente> dipendentiOrdinati = new ArrayList<>();
                 dipendentiOrdinati.addAll(prioritari);
                 dipendentiOrdinati.addAll(altri);
 
-                // --- ASSEGNAZIONE ---
                 int assegnati = 0;
                 for (Dipendente d : dipendentiOrdinati) {
                     if (assegnati >= slot.minDipendenti) break;
 
-                    // Il metodo tentaAssegnazioneTurno (che abbiamo modificato prima)
-                    // controllerà se hanno ancora ore residue (es. 8h totali).
-                    // Se il prioritario ha già fatto 8 ore, tornerà false e passerà al prossimo.
-                    if (tentaAssegnazioneTurno(d, data, slot.inizio, slot.fine)) {
+                    // Tenta l'inserimento verificando regole e ore contrattuali
+                    if (tentaAssegnazioneTurno(d, dataCorrente, slot.inizio, slot.fine)) {
                         assegnati++;
                     }
                 }
             }
         }
     }
+    
+    private double getPercentualeLavoroSettimanale(Dipendente d, LocalDate lunedi, LocalDate dataCorrente) {
+        List<Turno> turni = turnoRepository.findByDipendenteAndDataBetween(d, lunedi, dataCorrente);
+        double oreFatte = turni.stream()
+                .mapToDouble(t -> calcolaDurataOre(t.getOraInizio(), t.getOraFine()))
+                .sum();
+        
+        return oreFatte / (double) d.getOreSettimanaliContratto();
+    }
 
-    // --- NUOVO METODO HELPER ---
-    // Controlla se il dipendente ha un turno che finisce all'ora specificata
+    private double calcolaDurataOre(LocalTime inizio, LocalTime fine) {
+        long minuti = java.time.temporal.ChronoUnit.MINUTES.between(inizio, fine);
+        if (fine.isBefore(inizio) || (fine.equals(LocalTime.MIDNIGHT) && !inizio.equals(LocalTime.MIDNIGHT))) {
+            minuti += 1440;
+        }
+        return minuti / 60.0;
+    }
+
     private boolean haFinitoTurnoAlle(Dipendente d, LocalDate data, LocalTime oraTarget) {
         List<Turno> turniOggi = turnoRepository.findByDipendenteAndData(d, data);
         for (Turno t : turniOggi) {
-            // Se il turno finisce esattamente quando inizia il nuovo slot
-            if (t.getOraFine().equals(oraTarget)) {
-                return true;
-            }
-            // Gestione caso notturno (es. finisce a mezzanotte 00:00 e il target è 00:00)
-            if (t.getOraFine().equals(LocalTime.MIDNIGHT) && oraTarget.equals(LocalTime.MIDNIGHT)) {
-                return true;
-            }
+            if (t.getOraFine().equals(oraTarget)) return true;
         }
         return false;
     }
 
-    // ... il resto della classe (tentaAssegnazioneTurno, ecc.) rimane uguale ...
-
-    // Metodo privato refattorizzato che usa le REGOLE
+    @Transactional
     private boolean tentaAssegnazioneTurno(Dipendente d, LocalDate data, LocalTime inizio, LocalTime fine) {
-        
-        // 1. Validazione Regole (Strategy)
-        // La nuova SovrapposizioneRule ora permette due turni se non si toccano (es. 08-12 e 12-16)
+        // 1. Validazione Regole Strategy
         for (ShiftRule rule : rules) {
-            if (!rule.isValid(d, data, inizio, fine)) {
-                return false; 
-            }
+            if (!rule.isValid(d, data, inizio, fine)) return false; 
         }
 
-        // --- CALCOLO DURATA SLOT ---
-        int durataSlot = fine.getHour() - inizio.getHour();
-        if (durataSlot < 0) durataSlot += 24; 
-        if (durataSlot == 0 && fine.equals(LocalTime.of(0,0))) durataSlot = 24 - inizio.getHour();
-
-        // --- CALCOLO ORE SETTIMANALI (Già esistente) ---
-        LocalDate inizioSettimana = data.with(java.time.DayOfWeek.MONDAY);
-        LocalDate fineSettimana = data.with(java.time.DayOfWeek.SUNDAY);
-        List<Turno> turniSettimana = turnoRepository.findByDipendenteAndDataBetween(d, inizioSettimana, fineSettimana);
+        // 2. Calcolo Carico Attuale dal DB
+        double durataSlotRichiesta = calcolaDurataOre(inizio, fine);
+        LocalDate lunedi = data.with(java.time.DayOfWeek.MONDAY);
+        List<Turno> turniSettimana = turnoRepository.findByDipendenteAndDataBetween(d, lunedi, data);
         
-        int oreGiaLavorateSettimana = 0;
-        int oreGiaLavorateOggi = 0; // <--- NUOVO CONTATORE
+        double oreLavorateSettimana = 0;
+        double oreLavorateOggi = 0;
 
         for (Turno t : turniSettimana) {
-            int h = t.getOraFine().getHour() - t.getOraInizio().getHour();
-            if (h < 0) h += 24;
-            
-            oreGiaLavorateSettimana += h;
-
-            // Se il turno è di OGGI, lo sommo al contatore giornaliero
-            if (t.getData().equals(data)) {
-                oreGiaLavorateOggi += h;
-            }
+            double h = calcolaDurataOre(t.getOraInizio(), t.getOraFine());
+            oreLavorateSettimana += h;
+            if (t.getData().equals(data)) oreLavorateOggi += h;
         }
 
-        // --- CALCOLO CAPACITÀ GIORNALIERA RESIDUA ---
-        // Esempio: Elisa ha max 8h. Ha già fatto 4h oggi. 
-        // residuoOggi = 8 - 4 = 4 ore disponibili ancora.
-        int residuoOggi = d.getOreGiornaliereMax() - oreGiaLavorateOggi;
-        
-        if (residuoOggi <= 0) return false; // Ha già finito le ore per oggi
+        // 3. Verifica Limiti (Full-Time vs Part-Time)
+        double residuoOggi = (double) d.getOreGiornaliereMax() - oreLavorateOggi;
+        double residuoSettimana = (double) d.getOreSettimanaliContratto() - oreLavorateSettimana;
 
-        // --- DEFINIZIONE ORE ASSEGNABILI ---
-        // Deve essere il minimo tra:
-        // 1. La durata dello slot (es. 4 ore)
-        // 2. Quanto le manca al max giornaliero (es. 4 ore)
-        // 3. Quanto le manca al max settimanale
-        int oreDaAssegnare = Math.min(durataSlot, residuoOggi);
-        oreDaAssegnare = Math.min(oreDaAssegnare, d.getOreSettimanaliContratto() - oreGiaLavorateSettimana);
+        if (residuoOggi <= 0 || residuoSettimana <= 0) return false;
 
-        if (oreDaAssegnare <= 0) return false;
+        double oreEffettive = Math.min(durataSlotRichiesta, residuoOggi);
+        oreEffettive = Math.min(oreEffettive, residuoSettimana);
 
-        // 3. Salvataggio
-        LocalTime nuovaFine = inizio.plusHours(oreDaAssegnare);
-        Turno nuovoTurno = new Turno(data, inizio, nuovaFine, d);
-        turnoRepository.save(nuovoTurno);
+        if (oreEffettive <= 0) return false;
+
+        // 4. Salvataggio
+        LocalTime nuovaFine = inizio.plusMinutes((long) (oreEffettive * 60));
+        turnoRepository.save(new Turno(data, inizio, nuovaFine, d));
         
         return true;
     }
