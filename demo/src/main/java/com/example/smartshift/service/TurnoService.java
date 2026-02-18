@@ -164,7 +164,7 @@ public class TurnoService {
 
     private double calcolaDurataOre(LocalTime inizio, LocalTime fine) {
         long minuti = java.time.temporal.ChronoUnit.MINUTES.between(inizio, fine);
-        if (fine.isBefore(inizio) || (fine.equals(LocalTime.MIDNIGHT) && !inizio.equals(LocalTime.MIDNIGHT))) {
+        if (fine.isBefore(inizio) || fine.equals(LocalTime.MIDNIGHT) && !inizio.equals(LocalTime.MIDNIGHT)) {
             minuti += 1440;
         }
         return minuti / 60.0;

@@ -17,7 +17,11 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -29,18 +33,32 @@ import com.example.smartshift.repository.TurnoRepository;
 import com.example.smartshift.service.TurnoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-@WebMvcTest(TurnoController.class)
+@WebMvcTest(controllers = TurnoController.class, 
+    excludeAutoConfiguration = {
+        SecurityAutoConfiguration.class,
+        UserDetailsServiceAutoConfiguration.class
+    })
+@AutoConfigureMockMvc(addFilters = false)
 class TurnoControllerTest {
 
-    @Autowired private MockMvc mockMvc;
-    @Autowired private ObjectMapper objectMapper;
+    @Autowired
+    private MockMvc mockMvc;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @MockBean
     private TurnoService turnoService;
+
+    @MockBean
     private TurnoRepository turnoRepository;
+
+    @MockBean
     private DipendenteRepository dipendenteRepository;
+
+    @MockBean
     private AssenzaRepository assenzaRepository;
 
-    // Configurazione e generazione dei turni
     @Test
     @DisplayName("GET /config-slot")
     void testGetConfigurazioneSlot() throws Exception {
@@ -66,7 +84,6 @@ class TurnoControllerTest {
                 .andExpect(jsonPath("$.message").exists());
     }
 
-    // Gestione manuale per aggiunta di un turno
     @Test
     @DisplayName("POST /manuale - Aggiunta turno manuale")
     void testAggiungiTurnoManuale() throws Exception {
@@ -75,7 +92,7 @@ class TurnoControllerTest {
         req.data = "2023-10-25";
         req.oraInizio = "08:00";
         req.oraFine = "12:00";
-
+        
         Dipendente d = new Dipendente();
         d.setId(1L);
 
@@ -96,7 +113,7 @@ class TurnoControllerTest {
         mockMvc.perform(get("/api/turni"))
                 .andExpect(status().isOk());
     }
-    
+
     @Test
     @DisplayName("DELETE /{id} - Elimina turno")
     void testEliminaTurno() throws Exception {
@@ -108,7 +125,6 @@ class TurnoControllerTest {
                 .andExpect(jsonPath("$.message").value("Turno eliminato"));
     }
 
-    // Gestione delle assenze
     @Test
     @DisplayName("POST /assenza - Inserimento valido")
     void testInserisciAssenza_Success() throws Exception {
@@ -118,7 +134,7 @@ class TurnoControllerTest {
         req.dataFine = "2023-10-21";
         req.tipo = "FERIE";
         req.motivazione = "Vacanza";
-
+        
         Dipendente d = new Dipendente();
         when(dipendenteRepository.findById(1L)).thenReturn(Optional.of(d));
         when(assenzaRepository.findByDipendenteAndData(any(), any())).thenReturn(Collections.emptyList());
@@ -135,7 +151,7 @@ class TurnoControllerTest {
     void testInserisciAssenza_DateErrate() throws Exception {
         TurnoController.AssenzaRequest req = new TurnoController.AssenzaRequest();
         req.dataInizio = "2023-10-25";
-        req.dataFine = "2023-10-20";
+        req.dataFine = "2023-10-20"; // Errore!
 
         mockMvc.perform(post("/api/turni/assenza")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -172,7 +188,6 @@ class TurnoControllerTest {
                 .andExpect(jsonPath("$.error").value("Assenza non trovata"));
     }
 
-    // Gestione dei dipendenti
     @Test
     @DisplayName("POST /dipendenti - Aggiungi")
     void testAggiungiDipendente() throws Exception {
@@ -184,11 +199,12 @@ class TurnoControllerTest {
                 .content(objectMapper.writeValueAsString(d)))
                 .andExpect(status().isOk());
     }
-    
+
     @Test
     @DisplayName("GET /dipendenti")
     void testGetDipendenti() throws Exception {
-        mockMvc.perform(get("/api/turni/dipendenti")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/turni/dipendenti"))
+                .andExpect(status().isOk());
     }
 
     @Test
