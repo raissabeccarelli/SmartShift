@@ -31,45 +31,33 @@ class AssenzaRuleTest {
     @Test
     @DisplayName("Dovrebbe restituire FALSE se il dipendente ha un'assenza registrata in quella data")
     void testIsValid_ConAssenza_RitornaFalse() {
-        // 1. ARRANGE (Preparazione dati)
         Dipendente dipendente = new Dipendente();
         dipendente.setId(1L);
         dipendente.setNome("Mario");
         
         LocalDate dataTurno = LocalDate.of(2023, 10, 25);
-        
-        // Creiamo un'assenza finta
         Assenza assenzaFerie = new Assenza(dataTurno, "FERIE", dipendente, "Vacanza");
-        
-        // Istruiamo il Mock: quando cerchi le assenze per Mario il 25/10, restituisci una lista che contiene le ferie
+    
         when(assenzaRepository.findByDipendenteAndData(dipendente, dataTurno))
             .thenReturn(List.of(assenzaFerie));
 
-        // 2. ACT (Esecuzione)
-        // Gli orari non sono importanti per questa regola, mettiamo valori a caso
         boolean risultato = assenzaRule.isValid(dipendente, dataTurno, LocalTime.of(9, 0), LocalTime.of(18, 0));
-
-        // 3. ASSERT (Verifica)
         assertFalse(risultato, "Il metodo dovrebbe restituire false perché c'è un'assenza.");
     }
 
     @Test
     @DisplayName("Dovrebbe restituire TRUE se non ci sono assenze per quella data")
     void testIsValid_SenzaAssenza_RitornaTrue() {
-        // 1. ARRANGE
         Dipendente dipendente = new Dipendente();
         dipendente.setId(2L);
         
         LocalDate dataTurno = LocalDate.of(2023, 10, 26);
 
-        // Istruiamo il Mock: restituisci una lista VUOTA (nessuna assenza trovata)
         when(assenzaRepository.findByDipendenteAndData(dipendente, dataTurno))
             .thenReturn(Collections.emptyList());
 
-        // 2. ACT
         boolean risultato = assenzaRule.isValid(dipendente, dataTurno, LocalTime.of(9, 0), LocalTime.of(18, 0));
 
-        // 3. ASSERT
         assertTrue(risultato, "Il metodo dovrebbe restituire true perché il dipendente è disponibile.");
     }
 }

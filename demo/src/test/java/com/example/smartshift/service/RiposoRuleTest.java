@@ -35,7 +35,6 @@ class RiposoRuleTest {
         LocalDate oggi = LocalDate.of(2023, 10, 20);
         LocalDate ieri = oggi.minusDays(1);
 
-        // Simuliamo: Ieri nessun turno
         when(turnoRepository.findByDipendenteAndData(d, ieri)).thenReturn(Collections.emptyList());
 
         boolean risultato = riposoRule.isValid(d, oggi, LocalTime.of(8, 0), LocalTime.of(12, 0));
@@ -50,12 +49,10 @@ class RiposoRuleTest {
         LocalDate oggi = LocalDate.of(2023, 10, 20);
         LocalDate ieri = oggi.minusDays(1);
 
-        // Scenario: Ieri ha finito alle 23:00
         Turno turnoIeri = new Turno(ieri, LocalTime.of(15, 0), LocalTime.of(23, 0), d);
         
         when(turnoRepository.findByDipendenteAndData(d, ieri)).thenReturn(List.of(turnoIeri));
 
-        // Oggi inizia alle 07:00 (Gap: 23:00 -> 07:00 sono solo 8 ore)
         boolean risultato = riposoRule.isValid(d, oggi, LocalTime.of(7, 0), LocalTime.of(13, 0));
 
         assertFalse(risultato, "Tra le 23:00 e le 07:00 ci sono solo 8 ore, regola violata.");
@@ -67,14 +64,9 @@ class RiposoRuleTest {
         Dipendente d = new Dipendente();
         LocalDate oggi = LocalDate.of(2023, 10, 20);
         LocalDate ieri = oggi.minusDays(1);
-
-        // Scenario: Ieri turno serale 18:00 - 02:00 (del mattino dopo)
-        // Nota: Nel tuo codice Turno, se fine < inizio, si assume scavalco notte
         Turno turnoNotturno = new Turno(ieri, LocalTime.of(18, 0), LocalTime.of(2, 0), d);
         
         when(turnoRepository.findByDipendenteAndData(d, ieri)).thenReturn(List.of(turnoNotturno));
-
-        // Oggi inizia alle 08:00 (Gap: 02:00 -> 08:00 sono solo 6 ore)
         boolean risultato = riposoRule.isValid(d, oggi, LocalTime.of(8, 0), LocalTime.of(14, 0));
 
         assertFalse(risultato, "Tra le 02:00 e le 08:00 ci sono 6 ore, regola violata.");
@@ -86,13 +78,9 @@ class RiposoRuleTest {
         Dipendente d = new Dipendente();
         LocalDate oggi = LocalDate.of(2023, 10, 20);
         LocalDate ieri = oggi.minusDays(1);
-
-        // Ieri finito alle 21:00
         Turno turnoIeri = new Turno(ieri, LocalTime.of(13, 0), LocalTime.of(21, 0), d);
         
         when(turnoRepository.findByDipendenteAndData(d, ieri)).thenReturn(List.of(turnoIeri));
-
-        // Oggi inizia alle 08:00 (Gap esatto di 11 ore)
         boolean risultato = riposoRule.isValid(d, oggi, LocalTime.of(8, 0), LocalTime.of(14, 0));
 
         assertTrue(risultato, "11 ore esatte di stacco sono permesse.");
