@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+// Rappresenta un turno di lavoro assegnato a un dipendente
 @Entity
 @Table(name = "turni")
 public class Turno {
@@ -23,12 +24,15 @@ public class Turno {
     private LocalTime oraInizio;
     private LocalTime oraFine;
 
+    // Relazione con Dipendente
     @ManyToOne
     @JoinColumn(name = "dipendente_id")
     private Dipendente dipendente;
 
+    // Costruttore vuoto
     public Turno() {}
 
+    // Costruttore completo
     public Turno(LocalDate data, LocalTime oraInizio, LocalTime oraFine, Dipendente dipendente) {
         this.data = data;
         this.oraInizio = oraInizio;
@@ -36,7 +40,7 @@ public class Turno {
         this.dipendente = dipendente;
     }
 
-    // Getter e Setter standard
+    // Getter e Setter
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public LocalDate getData() { return data; }

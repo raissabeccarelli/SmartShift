@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
+// Rappresentazione di un dioendente dell'azienda
 @Entity
 @Table(name = "dipendenti")
 public class Dipendente {
@@ -23,20 +24,27 @@ public class Dipendente {
     private String nome;
     private String cognome;
 
+    // Numero di ore settimanali previste dal contratto
     @Column(name = "ore_settimanali_contratto")
     private int oreSettimanaliContratto;
 
+    // Limite massimo di ore lavorabili in un giorno
     @Column(name = "ore_giornaliere_max")
     private int oreGiornaliereMax;
 
+    // Giorni di ferie ancora disponibili
+    // Ogni dipendente ha a disposizione 26 giorni di ferie l'anno
     @Column(name = "ferie_residue")
     private int ferieResidue = 26;
 
+    // Relazione con Assenza
     @OneToMany(mappedBy = "dipendente", cascade = CascadeType.ALL)
     private List<Assenza> assenze = new ArrayList<>();
 
+    // Costruttore vuoto
     public Dipendente() {}
 
+    // Costruttore completo
     public Dipendente(String nome, String cognome, int oreSettimanaliContratto, int oreGiornaliereMax, int ferieResidue) {
         this.nome = nome;
         this.cognome = cognome;
@@ -45,6 +53,7 @@ public class Dipendente {
         this.ferieResidue = ferieResidue;
     }
 
+    // Getter e Setter
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getNome() { return nome; }

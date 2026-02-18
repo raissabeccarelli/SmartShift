@@ -7,12 +7,19 @@ import org.springframework.stereotype.Repository;
 
 import com.example.smartshift.model.Dipendente;
 
+/*
+ * Repository per la gestione delle operazioni CRUD su Dipendente
+ * Estende JpaRepository per ereditare metodi standard
+ */
 @Repository
 public interface DipendenteRepository extends JpaRepository<Dipendente, Long> {
 
-    // Trova i dipendenti per nome
+    /*
+     * Recupera tutti i dipendenti con un dato nome
+     * Query: SELECT * FROM dipendenti WHERE nome = ?
+    */
     List<Dipendente> findByNome(String nome);
     
-    // Ordina per ore contratto (crescenti) - NOTA LE PARENTESI <>
+    // Restituisce tutti i dipendenti ordinati per ore settimanali di contratto crescenti
     List<Dipendente> findAllByOrderByOreSettimanaliContrattoAsc();
 }

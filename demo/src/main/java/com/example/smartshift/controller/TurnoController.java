@@ -28,24 +28,26 @@ import com.example.smartshift.service.TurnoService;
 @RequestMapping("/api/turni")
 public class TurnoController {
 
+    // Service contenete la logica per la generazione dei turni
     @Autowired private TurnoService turnoService;
+    // Repository per l'accesso ai dati
     @Autowired private TurnoRepository turnoRepository;
     @Autowired private DipendenteRepository dipendenteRepository;
     @Autowired private AssenzaRepository assenzaRepository;
 
-    // --- CONFIGURAZIONE SLOT ---
+    // Configurazione degli slot orari
     @GetMapping("/config-slot")
     public ResponseEntity<?> getConfigurazioneSlot() {
         return ResponseEntity.ok(turnoService.getConfigurazioneSlot());
     }
 
-    // --- 1. GENERAZIONE (MODIFICATO PER 4 SLOT) ---
+    // RICHIESTA DI GENERAZIONE DEI TURNI SETTIMANALI
     public static class GenerazioneRequest {
         private String data;
         private int minMattina;
         private int minPomeriggio;
         private int minSera;
-        private int minNotte; // <--- NUOVO CAMPO
+        private int minNotte;
 
         public String getData() { return data; }
         public void setData(String data) { this.data = data; }
@@ -59,27 +61,30 @@ public class TurnoController {
         public int getMinSera() { return minSera; }
         public void setMinSera(int minSera) { this.minSera = minSera; }
         
-        // <--- NUOVI GETTER E SETTER
         public int getMinNotte() { return minNotte; }
         public void setMinNotte(int minNotte) { this.minNotte = minNotte; }
     }
 
+    // Genera i turni a partire dal lunedì della settimana selezionata
     @PostMapping("/genera")
     public ResponseEntity<?> generaTurni(@RequestBody GenerazioneRequest req) {
         try {
+            // Controllo per l'inserimento della data
             if (req.getData() == null) return ResponseEntity.badRequest().body(Map.of("error", "Data mancante"));
             LocalDate start = LocalDate.parse(req.getData());
+            // Viene individuato il primo giorno della settimana considerata (lunedi)
             LocalDate lunedi = start.with(java.time.DayOfWeek.MONDAY);
             
-            // --- MODIFICA QUI: PASSATI 4 PARAMETRI ---
+            // Si delega al Service la logca di assegnazione dei turni
             turnoService.generaTurniPerSettimana(
                 lunedi, 
                 req.getMinMattina(), 
                 req.getMinPomeriggio(), 
                 req.getMinSera(), 
-                req.getMinNotte() // Passiamo il valore notte
+                req.getMinNotte()
             );
             
+            //Risposta di conferma
             return ResponseEntity.ok(Map.of("message", "Turni generati per la settimana del " + lunedi));
         } catch (Exception e) {
             e.printStackTrace(); 
@@ -87,13 +92,15 @@ public class TurnoController {
         }
     }
 
-    // --- 2. LETTURA ---
+    // LETTURA DEI TURNI
+    // Restituisce tutti i turni presenti nel sistema
     @GetMapping
     public List<Turno> getTuttiTurni() {
         return turnoRepository.findAll();
     }
 
-    // --- 3. GESTIONE MANUALE ---
+    // INSERIMENTO MANUALE
+    // Gestisce l'inserimento manuale di un turno
     public static class TurnoManualeRequest {
         public Long dipendenteId;
         public String data;
@@ -101,25 +108,31 @@ public class TurnoController {
         public String oraFine;
     }
 
+    // Per inseriremanualmente un turno ad un dipendente
     @PostMapping("/manuale")
     public ResponseEntity<?> aggiungiTurnoManuale(@RequestBody TurnoManualeRequest req) {
         try {
+            // Recupera il dipendente dal Repository tramite il suo id, se non esiste segnala un errore
             Dipendente d = dipendenteRepository.findById(req.dipendenteId)
                     .orElseThrow(() -> new RuntimeException("Dipendente non trovato"));
 
+            // Creazione e popolamento del turno
             Turno t = new Turno();
             t.setData(LocalDate.parse(req.data));
             t.setOraInizio(LocalTime.parse(req.oraInizio));
             t.setOraFine(LocalTime.parse(req.oraFine));
             t.setDipendente(d);
 
+            // Salvataggio su database
             turnoRepository.save(t);
+            // Messaggio di conferma
             return ResponseEntity.ok(Map.of("message", "Turno aggiunto"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
+    // Elimina il turno tramite id con verifica di esistenza
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminaTurno(@PathVariable Long id) {
         if (turnoRepository.existsById(id)) {
@@ -130,7 +143,8 @@ public class TurnoController {
         }
     }
 
-    // --- 4. GESTIONE ASSENZE ---
+    // GESTIONE ASSENZE
+    // Inserimento di un'assenza (ferie, malattia o permesso)
     public static class AssenzaRequest {
         public Long dipendenteId;
         public String dataInizio;
@@ -139,12 +153,14 @@ public class TurnoController {
         public String motivazione;
     }
 
+    // Inserisce un'assenza su un intervallo di date
     @PostMapping("/assenza")
     public ResponseEntity<?> inserisciAssenza(@RequestBody AssenzaRequest req) {
         try {
             LocalDate start = LocalDate.parse(req.dataInizio);
             LocalDate end = LocalDate.parse(req.dataFine);
 
+            // Controllo validità dell'intervallo di date
             if (end.isBefore(start)) {
                 return ResponseEntity.badRequest().body(Map.of("error", "La data di fine non può essere precedente all'inizio"));
             }
@@ -153,8 +169,9 @@ public class TurnoController {
                     .orElseThrow(() -> new RuntimeException("Dipendente non trovato"));
 
             LocalDate current = start;
+            // Registra l'assenza per ogni giorno dell'intervallo
             while (!current.isAfter(end)) {
-                // Controllo se esiste già un'assenza per evitare duplicati (Opzionale ma consigliato)
+                // Controllo per evitare duplicati di assenze
                 if (assenzaRepository.findByDipendenteAndData(dip, current).isEmpty()) {
                     Assenza a = new Assenza();
                     a.setDipendente(dip);
@@ -178,6 +195,7 @@ public class TurnoController {
         return assenzaRepository.findAll();
     }
 
+    // Eliminazione dell'assenza tremite id
     @DeleteMapping("/assenza/{id}")
     public ResponseEntity<?> eliminaAssenza(@PathVariable Long id) {
         if (assenzaRepository.existsById(id)) {
@@ -188,23 +206,27 @@ public class TurnoController {
         }
     }
 
-    // --- 5. GESTIONE DIPENDENTI ---
+    // GESTIONE DIPENDENTI
+    // Restituisce l'elenco di tutti i dipendenti
     @GetMapping("/dipendenti")
     public List<Dipendente> getDipendenti() {
         return dipendenteRepository.findAll();
     }
 
+    // Aggiunge un nuovo dipendente
     @PostMapping("/dipendenti")
     public Dipendente aggiungiDipendente(@RequestBody Dipendente nuovoDipendente) {
         return dipendenteRepository.save(nuovoDipendente);
     }
 
+    // Elimina un dipendente
     @Transactional
     @DeleteMapping("/dipendenti/{id}")
     public ResponseEntity<?> eliminaDipendente(@PathVariable Long id) {
         try {
             Dipendente d = dipendenteRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Dipendente non trovato"));
+            // Rimozione dei turni associoti al dipendente da eliminare
             turnoRepository.deleteByDipendente(d);
             dipendenteRepository.delete(d);
             return ResponseEntity.ok().body(Map.of("message", "Eliminato con successo"));
