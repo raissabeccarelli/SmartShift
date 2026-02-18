@@ -1,3 +1,11 @@
+<!--
+    Questa pagina gestisce:
+    - Visualizzazione delle settimane disponibili
+    - Generazione automatica dei turni
+    - Modifica manuale dei turni
+    - Controllo di eventuali carenze di dipendenti per fascia oraria
+    - Evidenziazione degi straordinari
+-->
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -6,7 +14,8 @@
     <link rel="stylesheet" href="style.css">
     <style>
 
-/* --- STILI PER LE SEGNALAZIONI --- */
+        /* Stili per le SEGNALAZIONI VISIVE SUI TURNI */
+        /* Straordinari */
         .shift-card.overtime {
             border: 2px solid #6f42c1;
             background-color: #f3e8ff;
@@ -19,12 +28,13 @@
             background-color: #6f42c1; color: white; font-size: 0.7em; padding: 2px 4px;
             border-radius: 4px; margin-left: 5px; vertical-align: middle;
         }
+        /* Carenza di personale */
         .slot-missing {
             border: 2px dashed #dc3545; background-color: #fff5f5; color: #dc3545;
             padding: 8px; margin: 5px 0; border-radius: 6px; font-size: 0.85em; text-align: center;
         }
 
-        /* --- STILI DIVISORI FASCE --- */
+        /* Stili per i DIVISORI DELLE FASCE ORARIE */
         .slot-divider {
             background-color: #f8f9fa;
             color: #6c757d;
@@ -42,7 +52,8 @@
             font-size: 0.7em; color: #ddd; padding: 2px; text-align: center; font-style: italic;
         }
 
-        /* --- INPUT NEL MODALE CONFIGURAZIONE --- */
+        /* Stili per la CONFIGURAZIONE DEI TURNI */
+        /* Inserimento del numero minimo di dipendenti per fascia*/
         .config-row {
             display: flex; align-items: center; justify-content: space-between;
             margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px;
@@ -53,28 +64,34 @@
         }
 
 
-        /* --- STILI GENERALI --- */
+        /* STILI GENERALI PER I TURNI */
+        /* Card del turno*/
         .shift-card { position: relative; }
+        /* Pulsante di eliminazione*/
         .btn-delete-shift {
             position: absolute; top: 2px; right: 2px; background: transparent; color: red;
             border: none; cursor: pointer; font-weight: bold; font-size: 14px;
         }
+        /* Pulsante di aggunta di uno slot*/
         .btn-add-slot {
             width: 100%; background-color: #e9ecef; border: 1px dashed #adb5bd;
             color: #495057; padding: 5px; margin-top: 10px; cursor: pointer; border-radius: 4px;
         }
         
-        /* HEADER E FILTRO */
+        /* Stili per HEADER E FILTRI */
+        /* Layout intestazione */
         .modal-header-row {
             display: flex; justify-content: space-between; align-items: center;
             margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee;
         }
         .header-actions-right { display: flex; align-items: center; gap: 15px; }
+        /* Select*/
         .select-modern {
             padding: 8px 12px; font-size: 14px; border: 1px solid #ced4da; border-radius: 6px;
             background-color: #fff; outline: none; transition: all 0.2s; cursor: pointer;
         }
         .select-modern:focus { border-color: #6f42c1; box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.15); }
+        /* Pulsante chiusura */
         .close-styled { font-size: 28px; color: #aaa; cursor: pointer; line-height: 1; }
         .close-styled:hover { color: #333; }
 
@@ -82,56 +99,91 @@
 </head>
 <body>
 
+<!--
+    BARRA DI NAVIGAZIONE
+    Permette di navigare le varie sezioni
+    -->
 <div class="navbar">
     <a href="index.html">Home</a>
     <a href="calendario.html" class="active">Calendario</a>
     <a href="dipendenti.html">Gestione Dipendenti</a>
 </div>
 
+<!--
+    CONTENITORE DEL CALENDARIO
+    -->
 <div class="container">
+    <!-- Titolo della pagina -->
     <h1>Pianificazione Settimanale</h1>
+    <!-- 
+        Sezione che contiene le card delle settimane future con:
+        - lo stato della settimana (Vuota / In corso / Pianificata)
+        - i pulsanti azione (Vedi / Modifica / Genera)
+    -->
     <div id="lista-settimane"></div>
 
+    <!--
+        MODALE PER LA VISUALIZZAZIONE DEI TURNI SETTIMANALI
+        Mostra la griglia dei turni della settimana selezionata.
+    -->
     <div id="modalTurni" class="modal">
         <div class="modal-content" style="width: 95%; max-width: 1400px; height: 90vh; display:flex; flex-direction:column;">
+            <!-- Header del modale con titolo e filtro -->
             <div class="modal-header-row">
                 <h2 id="modalTitle" style="margin:0;">Turni Settimana</h2>
                 <div class="header-actions-right">
+                    <!-- Filtro dinamico dei dipendenti: 
+                        aggiorna la visualizzazione senza ricaricare la pagina
+                    -->
                     <select id="filtroDipendente" class="select-modern" onchange="aggiornaVistaTurni()">
                         <option value="">🔍 Mostra tutti i dipendenti</option>
                     </select>
+                    <!-- Pulsante di chiusura del modale -->
                     <span class="close-styled" onclick="chiudiModal('modalTurni')">&times;</span>
                 </div>
             </div>
+            <!-- 
+                 Griglia calendario: contiene 7 colonne (giorni settimana)
+                 suddivise in 4 fasce orarie ed evidenzia straordinari e carenze
+            -->
             <div id="calendarGrid" class="calendar-grid" style="flex-grow:1; overflow-y:auto;"></div>
         </div>
     </div>
 
+    <!-- MODALE PER L'AGGIUNTA MANUALE DI UN TURNO -->
     <div id="modalAggiungi" class="modal" style="z-index: 1100;">
         <div class="modal-content" style="max-width: 400px;">
+            <!-- Chiusura del modale -->
             <span class="close" onclick="chiudiModal('modalAggiungi')">&times;</span>
             <h3>Aggiungi Turno</h3>
             <p>Giorno: <strong id="addDateLabel"></strong></p>
             <input type="hidden" id="addDateValue">
+            <!-- Selezione del dipendente -->
             <label>Dipendente</label>
             <select id="selectDipendente" style="width:100%; padding:8px; margin-bottom:10px;"></select>
+            <!-- Selezione dell'orario -->
             <label>Orario</label>
             <div style="display:flex; gap:10px;">
                 <input type="time" id="addStart" value="09:00" style="flex:1;">
                 <input type="time" id="addEnd" value="13:00" style="flex:1;">
             </div>
             <br>
+            <!-- Bottone per confermare il salvataggio del turno -->
             <button class="btn-primary" onclick="salvaTurnoManuale()" style="width:100%;">Salva Turno</button>
         </div>
     </div>
 
+    <!-- MODALE PER LA CONFIGURAZIONE DELLA GENERAZIONE AUTOMATICA  -->
     <div id="modalConfigura" class="modal" style="z-index: 1200;">
         <div class="modal-content" style="max-width: 450px;">
+            <!-- Chiusura del modale -->
             <span class="close" onclick="chiudiModal('modalConfigura')">&times;</span>
             <h3 style="color: #6f42c1;">⚙️ Configura Generazione</h3>
             <p>Imposta il numero <strong>minimo</strong> di dipendenti per fascia oraria.</p>
+             <!-- Data di riferimento per la generazione -->
             <input type="hidden" id="configDateValue">
             
+            <!-- Configurazione degli slot orari -->
             <div class="config-row">
                 <label>Mattina (08:00 - 12:00)</label>
                 <input type="number" id="confMattina" class="config-input" value="3" min="0">
@@ -150,7 +202,9 @@
             </div>
 
             <div style="text-align: right; margin-top: 20px;">
+                <!-- Pulsante di chiusura -->
                 <button class="btn-secondary" onclick="chiudiModal('modalConfigura')">Annulla</button>
+                <!-- Pulsante di conferma -->
                 <button class="btn-primary" onclick="confermaGenerazione()">Genera Turni</button>
             </div>
         </div>
@@ -158,14 +212,15 @@
 </div>
 
 <script>
-    // --- VARIABILI GLOBALI ---
+    // VARIABILI GLOBALI
     let tuttiITurni = [];
     let tuttiDipendenti = [];
     let tutteAssenze = [];
     let configSlot = []; 
     let viewState = { start: null, end: null, edit: false };
 
-    // FUNZIONI UTILITA
+    // FUNZIONI DI UTILITA'
+    // Converte una data nel formato YYYY-MM-DD
     function getYMD(dateInput) {
         if (!dateInput) return "";
         let d = (typeof dateInput === 'number' || (typeof dateInput === 'string' && /^\d+$/.test(dateInput))) 
@@ -174,9 +229,11 @@
         return d.toLocaleDateString('en-CA');
     }
 
+    //  Calcola le prossime 5 settimane a partire dal lunedì corrente
     function getNextWeeks() {
         let weeks = [];
         let current = new Date();
+        // Calcolo del lunedì della settimana corrente
         let day = current.getDay(); 
         let diff = current.getDate() - day + (day === 0 ? -6 : 1);
         let monday = new Date(current);
@@ -189,22 +246,26 @@
                 startStr: getYMD(start), endStr: getYMD(end),
                 label: `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`
             });
+            // Passa alla settimana successiva
             monday.setDate(monday.getDate() + 7);
         }
         return weeks;
     }
 
-    // --- INIT ---
+    // INIZIALIZZAZIONE DELLA PAGINA DEL CALENDARIO
     async function initCalendario() {
         try {
+            // Chiama le API
             const [resTurni, resDip, resAss, resConf] = await Promise.all([
                 fetch('/api/turni'), fetch('/api/turni/dipendenti'), fetch('/api/turni/assenze'), fetch('/api/turni/config-slot')
             ]);
+            // Parsing delle risèpste
             if(resTurni.ok) tuttiITurni = await resTurni.json();
             if(resDip.ok) tuttiDipendenti = await resDip.json();
             if(resAss.ok) tutteAssenze = await resAss.json();
             if(resConf.ok) configSlot = await resConf.json();
 
+            // Popolamento del filtro sui dipendenti
             const selectFiltro = document.getElementById('filtroDipendente');
             selectFiltro.innerHTML = '<option value="">🔍 Mostra tutti i dipendenti</option>';
             tuttiDipendenti.forEach(d => {
@@ -212,31 +273,39 @@
                 opt.value = d.id; opt.innerText = `${d.nome} ${d.cognome}`; selectFiltro.appendChild(opt);
             });
 
+            // Renderizza le settimane disponibii
             renderWeeks();
         } catch(e) { console.error("Errore API", e); }
     }
 
+    // RENDER SETTIMANE FUTURE
     function renderWeeks() {
         const weeks = getNextWeeks();
         const container = document.getElementById('lista-settimane');
         container.innerHTML = '';
         
         weeks.forEach((week, index) => {
+            // Controlla se esistono turni nella settimana
             const hasShifts = tuttiITurni.some(t => getYMD(t.data) >= week.startStr && getYMD(t.data) <= week.endStr);
             const div = document.createElement('div');
             div.className = `week-card ${hasShifts ? 'generated' : 'empty'}`;
             
             let buttonsHtml = '';
             if (hasShifts) {
+                // Pulsante di visualizzazione
                 buttonsHtml += `<button class="btn-primary" onclick="apriTurni('${week.startStr}', '${week.endStr}', false)">👁️ Vedi</button> `;
+                // Pulsante di modifica
                 buttonsHtml += `<button class="btn-secondary" onclick="apriTurni('${week.startStr}', '${week.endStr}', true)">✏️ Modifica</button> `;
+                // Ricalcolo (possibile solo per settimane future)
                 if (index > 0) {
                     buttonsHtml += `<button class="btn-warning" onclick="apriConfigurazioneGenerazione('${week.startStr}')">🔄 Ricalcola</button>`;
                 }
             } else {
+                // Generazione iniziale della settimana
                 buttonsHtml = `<button class="btn-success" onclick="apriConfigurazioneGenerazione('${week.startStr}')">Genera Turni</button>`;
             }
 
+            // Stato
             div.innerHTML = `
                 <div>
                     <h3>Settimana ${week.label}</h3>
@@ -252,27 +321,32 @@
         });
     }
 
-    // --- LOGICA MODALE GENERAZIONE (AGGIORNATA) ---
+    // MODALE DI CONFIGURAZIONE E GENERAZIONE DEI TURNI
     function apriConfigurazioneGenerazione(dataStart) {
         document.getElementById('configDateValue').value = dataStart;
         document.getElementById('modalConfigura').style.display = 'flex';
     }
 
+    /*
+       Invio della richiesta POST al backend per generare i turni
+       trasmettendo il numero minimo di dipendenti per ciascuna
+       fascia oraria
+    */
     async function confermaGenerazione() {
         const data = document.getElementById('configDateValue').value;
         const minM = document.getElementById('confMattina').value;
         const minP = document.getElementById('confPomeriggio').value;
         const minS = document.getElementById('confSera').value;
-        // Recuperiamo il valore della Notte
         const minN = document.getElementById('confNotte').value;
 
         if(!data || minM < 0 || minN < 0) { alert("Dati non validi"); return; }
 
+        // Feedback visivo durante la generazione
         const btn = document.querySelector('#modalConfigura .btn-primary');
         const originalText = btn.innerText; btn.innerText = "Generazione..."; btn.disabled = true;
         
         try {
-            // Invio 4 parametri al Backend
+            // Invio dei parametri al backend
             const res = await fetch('/api/turni/genera', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -281,7 +355,7 @@
                     minMattina: parseInt(minM), 
                     minPomeriggio: parseInt(minP), 
                     minSera: parseInt(minS),
-                    minNotte: parseInt(minN) // <--- NUOVO CAMPO
+                    minNotte: parseInt(minN)
                 })
             });
             if(res.ok) location.reload();
@@ -289,9 +363,11 @@
         } catch(e) { console.error(e); alert("Errore connessione"); btn.innerText = originalText; btn.disabled = false; }
     }
 
-    // --- LOGICA GRIGLIA TURNI CON 4 SLOT ---
+    // APERTURA E AGGIORNAMENTO DELLA GRIGLIA DEI TURNI
+    // Aggiorna la vista mantenendo lo stato corrente
     function aggiornaVistaTurni() { if(viewState.start) apriTurni(viewState.start, viewState.end, viewState.edit); }
 
+    // Apertura del modale per la settimana
     function apriTurni(startStr, endStr, isEditMode) {
         viewState = { start: startStr, end: endStr, edit: isEditMode };
         const modal = document.getElementById('modalTurni');
@@ -309,11 +385,13 @@
         modalTitle.innerText = isEditMode ? `Modifica settimana ${dataFormatted}` : `Settimana ${dataFormatted}`;
         modalTitle.style.color = isEditMode ? "#d63384" : "#333";
 
+        // Calcolo delle ore settimanali per dipendente
         let oreMap = {};
         tuttiDipendenti.forEach(d => oreMap[d.id] = 0);
         tuttiITurni.forEach(t => {
             if(getYMD(t.data) >= startStr && getYMD(t.data) <= endStr) {
                 let hIn = parseInt(t.oraInizio.split(':')[0]), hOut = parseInt(t.oraFine.split(':')[0]);
+                // Gestione turni notturni (terminano dopo mezzanotte)
                 if(hOut < hIn) hOut += 24; 
                 if(t.dipendente?.id) oreMap[t.dipendente.id] = (oreMap[t.dipendente.id] || 0) + (hOut - hIn);
             }
