@@ -1,22 +1,31 @@
-/* style.css - Design System SmartShift */
+/* FILE CENTRALE DI STILE DELL'APPLICAZIONE
+   Contiene:
+   - la palette colori
+   - i layout principali
+   - i componenti riutilizzabili
+   - gli stili di calendario e tabelle
+*/
+
+/* PALETTE COLORI */
 :root {
-    --primary: #0d6efd;       /* Blu principale */
-    --secondary: #6c757d;     /* Grigio */
-    --success: #198754;       /* Verde */
-    --danger: #dc3545;        /* Rosso */
-    --light: #f8f9fa;         /* Sfondo chiaro */
-    --dark: #212529;          /* Testo scuro */
+    --primary: #0d6efd;       /* Colore principale (Blu) */
+    --secondary: #6c757d;     /* Colore secondario (Grigio) */
+    --success: #198754;       /* Colore stato positivo (Verde) */
+    --danger: #dc3545;        /* Colore stato errore/negativo (Rosso) */
+    --light: #f8f9fa;         /* Colore sfondo chiaro */
+    --dark: #212529;          /* Colore testo principale */
 }
 
+/* LAYOUT DI BASE */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f0f2f5;
+    background-color: #f0f2f5; /* Sfondo globale */
     margin: 0;
     padding: 20px;
     color: var(--dark);
 }
 
-/* NAVBAR */
+/* BARRA DI NAVIGAZIONE */
 .navbar {
     background-color: white;
     padding: 15px 30px;
@@ -38,12 +47,13 @@ body {
     text-transform: uppercase;
 }
 
+/* Stato hover e pagina attiva */
 .navbar a:hover, .navbar a.active {
     color: var(--primary);
     border-bottom: 2px solid var(--primary);
 }
 
-/* CARDS E LAYOUT */
+/* LAYOUT DI CONTAINER E CARD (componenti riutilizzabili per strutturre le pagine)*/
 .container {
     max-width: 1000px;
     margin: 0 auto;
@@ -57,6 +67,7 @@ body {
     margin-bottom: 20px;
 }
 
+/* Titoli */
 h1, h2, h3 { color: var(--primary); margin-top: 0; }
 
 /* TABELLE */
@@ -68,7 +79,7 @@ table {
 th { text-align: left; background: #e9ecef; padding: 12px; color: var(--dark); }
 td { padding: 12px; border-bottom: 1px solid #ddd; vertical-align: middle; }
 
-/* ELEMENTI UI */
+/* ELEMENTI UI (bottoni e campi input) */
 button {
     padding: 10px 20px;
     border: none;
@@ -77,19 +88,23 @@ button {
     font-weight: bold;
     transition: 0.2s;
 }
+/* Varianti dei bottoni a seconda dello stato */
 .btn-primary { background: var(--primary); color: white; }
 .btn-success { background: var(--success); color: white; }
 .btn-danger { background: var(--danger); color: white; }
 .btn-sm { padding: 5px 10px; font-size: 0.85em; margin-right: 5px; }
 .btn-warning { 
     background-color: #ffc107; 
-    color: #212529; /* Testo scuro per contrasto */
+    color: #212529;
 }
 .btn-warning:hover {
     background-color: #e0a800;
 }
+/* Hover */
 button:hover { opacity: 0.9; transform: translateY(-1px); }
 
+
+/* Form di input */
 input, select, textarea {
     width: 100%;
     padding: 10px;
@@ -100,7 +115,7 @@ input, select, textarea {
     box-sizing: border-box;
 }
 
-/* SETTIMANE (Calendario) */
+/* CALENDARIO E CARD SETTIMANE */
 .week-card {
     display: flex;
     justify-content: space-between;
@@ -112,10 +127,13 @@ input, select, textarea {
     margin-bottom: 15px;
     border-left: 5px solid var(--secondary);
 }
+/* Settimana con turni generati */
 .week-card.generated { border-left-color: var(--success); }
+/* Settimana senza turni */
 .week-card.empty { border-left-color: var(--danger); }
 
-/* MODAL (Popups) */
+/* MODALE PER POPUP */
+/* Modale */
 .modal {
     display: none;
     position: fixed;
@@ -126,6 +144,7 @@ input, select, textarea {
     justify-content: center;
     align-items: center;
 }
+/* Contenuto della modale */
 .modal-content {
     background-color: white;
     padding: 25px;
@@ -138,6 +157,7 @@ input, select, textarea {
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
 
+/* Pulsante di chiusura della modale */
 .close {
     position: absolute;
     right: 20px; top: 15px;
@@ -146,15 +166,16 @@ input, select, textarea {
     z-index: 10;
 }
 
-/* --- NUOVO STILE: GRIGLIA CALENDARIO --- */
+/* GRIGLIA DEL CALENDARIO */
 .calendar-grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr); /* 7 colonne fisse */
+    grid-template-columns: repeat(7, 1fr); /* 7 giorni a settimana -> 7 colonne fisse */
     gap: 10px;
     margin-top: 20px;
     padding-bottom: 10px;
 }
 
+/* Colonna per un singolo giorno */
 .day-column {
     background-color: #f1f3f5;
     border-radius: 6px;
@@ -164,6 +185,8 @@ input, select, textarea {
     min-height: 300px; /* Altezza minima colonne */
 }
 
+
+/* Intestazione del giorno (nome e data) */
 .day-header {
     background-color: var(--primary);
     color: white;
@@ -175,12 +198,13 @@ input, select, textarea {
     text-transform: capitalize;
 }
 
+/* Corpo del giorno: contenente i turni */
 .day-body {
     padding: 8px;
     flex-grow: 1;
 }
 
-/* Card del singolo turno */
+/* CARD DEL SINGOLO TURNO */
 .shift-card {
     background: white;
     border-left: 4px solid var(--success);
@@ -190,7 +214,7 @@ input, select, textarea {
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     transition: transform 0.2s;
 }
-
+ /* Hover */
 .shift-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
@@ -212,6 +236,7 @@ input, select, textarea {
     border-radius: 4px;
 }
 
+/* Placeholder quando non ci sono turni */
 .no-shift {
     text-align: center;
     color: #adb5bd;
@@ -219,31 +244,30 @@ input, select, textarea {
     margin-top: 20px;
 }
 
-/* RESPONSIVE: Su mobile diventa una colonna unica */
+/* ADATTAMENTO DELLA GRIGLIA SU SCHERM PIù PICCOLI */
 @media (max-width: 900px) {
     .calendar-grid {
-        grid-template-columns: repeat(2, 1fr); /* 2 colonne su tablet */
+        grid-template-columns: repeat(2, 1fr); /* Tablet (2 colonne) */
     }
 }
 
 @media (max-width: 600px) {
     .calendar-grid {
-        grid-template-columns: 1fr; /* 1 colonna su mobile */
+        grid-template-columns: 1fr; /* Mobile (1 colonna) */
     }
     .day-column {
-        min-height: auto;
+        min-height: auto; /* Altezza dinamica */
     }
 }
 
 
-/* Personalizzazione della griglia per la home */
+/* CALENDARIO PER LA SCHERMATA HOME */
 .calendar-grid {
     margin-top: 10px;
 }
 
-/* Stile leggermente diverso per i turni in home per differenziarli */
 .shift-card {
-    border-left: 4px solid var(--primary); /* Blu invece di verde per la home */
+    border-left: 4px solid var(--primary);
     margin-bottom: 8px;
     background: white;
     padding: 10px;
@@ -266,7 +290,8 @@ input, select, textarea {
     color: var(--dark);
 }
 
-/* Stato vuoto per il giorno */
+/* STATI PARTICOLARI */
+/* Giorno senza turni */
 .day-empty {
     text-align: center;
     color: #ccc;
@@ -275,7 +300,7 @@ input, select, textarea {
     font-size: 0.9em;
 }
 
-/* Highlight per il giorno corrente */
+/* Messa in evidenza del giorno corrente */
 .day-column.today {
     border: 2px solid var(--primary);
     background-color: #f8fbff;
@@ -285,4 +310,3 @@ input, select, textarea {
     font-size: 1.1em;
     text-decoration: underline;
 }
-

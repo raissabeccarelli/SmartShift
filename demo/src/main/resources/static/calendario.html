@@ -397,32 +397,40 @@
             }
         });
 
+        // MOSTRA SETTIMANA
         let currentDay = new Date(startStr);
         for (let i = 0; i < 7; i++) {
             const dateKey = getYMD(currentDay); 
+            // Turni del giorno ordinati in base all'ora di inizio
             const turniDelGiorno = tuttiITurni.filter(t => getYMD(t.data) === dateKey);
             turniDelGiorno.sort((a,b) => a.oraInizio.localeCompare(b.oraInizio));
 
-            // -- CARENZE (Visualizzazione) --
-            // Questo blocco funziona automaticamente con i 4 slot restituiti dal backend
+            // Controlla crenze di personale negli slot orari
+            // verificando ora per ora che il niumereo minimo di dipendeni sia rispettato
             let warningHtml = '';
             if(configSlot.length > 0 && idFiltro === "") {
                 configSlot.forEach(slot => {
                     let slotStart = parseInt(slot.inizio.split(':')[0]);
                     let slotEnd = parseInt(slot.fine.split(':')[0]);
+                    // Gestione turni che terminano dopo mezzanotte
                     let calcEnd = (slotEnd < slotStart) ? slotEnd + 24 : slotEnd;
                     let oreScoperte = [];
+                    // Ora per ora
                     for (let h = slotStart; h < calcEnd; h++) {
                         let currentHour = h % 24;
                         const attivi = turniDelGiorno.filter(t => {
                             let tIn = parseInt(t.oraInizio.split(':')[0]), tOut = parseInt(t.oraFine.split(':')[0]);
                             let tInNorm=tIn, tOutNorm=tOut;
+                            // Per turni che terminano dopo mezzanotte
                             if(tOutNorm<tInNorm) tOutNorm+=24; 
                             if(tInNorm<slotStart && calcEnd>24) tInNorm+=24; if(tOutNorm<tInNorm) tOutNorm+=24; if(tOutNorm<slotStart && calcEnd>24) tOutNorm+=24;
                             return tInNorm <= h && tOutNorm > h;
                         }).length;
+                        // Se il personale attivo è inferiore al minimo richiesto
+                        // seganala una carenza
                         if (attivi < slot.min) oreScoperte.push({h:currentHour, c:attivi});
                     }
+                    // Unisce ore scoperte consecutive in intervalli
                     if (oreScoperte.length > 0) {
                         let ranges = []; 
                         let sB = oreScoperte[0].h, cB = oreScoperte[0].c, pH = sB;
@@ -438,14 +446,15 @@
                 });
             }
 
-            // -- DIVISORI FASCE E CARDS (AGGIORNATO A 4 SLOT) --
-            // Variabili per i 4 bucket
+            // DIVISORI DELL FASCE
             let htmlM='', htmlP='', htmlS='', htmlN='';
             let cM=0, cP=0, cS=0, cN=0;
 
             turniDelGiorno.forEach(t => {
+                // Applica un filtro sui dipendenti, se attivo
                 if(idFiltro !== "" && t.dipendente.id != idFiltro) return;
                 const dip = tuttiDipendenti.find(d => d.id === t.dipendente.id);
+                // Verifica se le ore sono straordinari (ore settimanali > contratto)
                 let isOver = (dip && oreMap[dip.id] > dip.oreSettimanaliContratto);
                 
                 const card = `
@@ -457,17 +466,17 @@
                 
                 let hStart = parseInt(t.oraInizio.split(':')[0]);
                 
-                // LOGICA DI SMISTAMENTO AGGIORNATA
+                // Smistamento nelle 4 fasce
                 if(hStart < 12) { htmlM+=card; cM++; }       // Fino alle 12 (Mattina)
                 else if(hStart < 16) { htmlP+=card; cP++; }  // 12-16 (Pomeriggio)
                 else if(hStart < 20) { htmlS+=card; cS++; }  // 16-20 (Sera)
-                else { htmlN+=card; cN++; }                  // 20+ (Notte)
+                else { htmlN+=card; cN++; }                  // Dalle 20 in poi (Notte)
             });
 
             const emptyPl = `<div class="slot-empty-placeholder">-</div>`;
             let dailyBody = '';
             
-            // Renderizziamo i 4 blocchi
+            // Renderizzazione del giorno e dei suoi 4 slot orari
             dailyBody += `<div class="slot-divider">Mattina <small>(08-12)</small></div>` + (cM > 0 ? htmlM : emptyPl);
             dailyBody += `<div class="slot-divider">Pomeriggio <small>(12-16)</small></div>` + (cP > 0 ? htmlP : emptyPl);
             dailyBody += `<div class="slot-divider">Sera <small>(16-20)</small></div>` + (cS > 0 ? htmlS : emptyPl);
@@ -486,8 +495,8 @@
         modal.style.display = 'flex';
     }
 
-    // (Il resto delle funzioni di modale aggiunta e salvataggio manuale rimangono uguali, 
-    // perché lavorano con input orari generici e non dipendono dagli slot fissi)
+    // GESTIONE DELLA MODALE DI AGGIUNTA TURNO
+    // Apertura della modale per una data specifica
     function apriModalAggiungi(dataTarget, weekStart, weekEnd) {
         document.getElementById('addDateValue').value = dataTarget;
         document.getElementById('addDateLabel').innerText = dataTarget;
@@ -498,32 +507,39 @@
             const option = document.createElement('option');
             option.value = d.id;
             
+            // Verifica l'esistenza di assenze per la data in questione
             const assenza = tutteAssenze.find(a => (a.dipendente_id || a.dipendenteId || (a.dipendente && a.dipendente.id)) == d.id && getYMD(a.data) === dataTarget);
+            // Disabilita dipendenti assenti nella data considerata
             if(assenza) {
                 option.text = `⛔ ${d.nome} ${d.cognome} (${assenza.tipo})`;
                 option.disabled = true; option.style.backgroundColor = "#ffe6e6"; select.appendChild(option); return;
             }
 
+            // Calcola quante ore sosno state  già assegnate al dipendente nella settimana
             const turniSett = tuttiITurni.filter(t => t.dipendente.id == d.id && getYMD(t.data) >= weekStart && getYMD(t.data) <= weekEnd);
             let ore = turniSett.reduce((acc, t) => {
                 let hI = parseInt(t.oraInizio.split(':')[0]), hO = parseInt(t.oraFine.split(':')[0]);
                 return acc + ((hO < hI ? hO+24 : hO) - hI);
             }, 0);
 
+            // Verifica se ad un dipendente è già stato assegnato un turno nel giorno considerato
             const inTurnoOggi = tuttiITurni.some(t => t.dipendente.id == d.id && getYMD(t.data) === dataTarget);
             let label = `${d.nome} ${d.cognome} (${ore}/${d.oreSettimanaliContratto}h)`;
             
             if(inTurnoOggi) { option.className = "impegnato"; label += " (Già qui)"; }
+            // Starordinario se (oreLavoarte >= oreContratto)
             else if(ore >= d.oreSettimanaliContratto) option.className = "straordinario";
             
             option.text = label;
             select.appendChild(option);
         });
 
+        // Se è attivo un filtro dipendente viene preselezionato
         if(document.getElementById('filtroDipendente').value) select.value = document.getElementById('filtroDipendente').value;
         document.getElementById('modalAggiungi').style.display = 'flex';
     }
 
+    // Salvataggio di un turno inserito manualmente dall'utente
     async function salvaTurnoManuale() {
         const dipId = document.getElementById('selectDipendente').value;
         const dataSelezionata = document.getElementById('addDateValue').value; 
@@ -532,12 +548,14 @@
 
         if(!dipId || !startInput || !endInput) return alert("Dati mancanti");
 
+        // Conversione orari
         const [hIn, mIn] = startInput.split(':').map(Number);
         const [hOut, mOut] = endInput.split(':').map(Number);
         const minutiNuovoIn = hIn * 60 + mIn;
         let minutiNuovoOut = hOut * 60 + mOut;
-        if (minutiNuovoOut <= minutiNuovoIn) minutiNuovoOut += 1440;
+        if (minutiNuovoOut <= minutiNuovoIn) minutiNuovoOut += 1440; // Oltre mezzanotte
 
+        // Controlla eventuali sovrapposizioni con turni già esistenti
         const collisione = tuttiITurni.find(t => {
             const stessoDip = (t.dipendente && t.dipendente.id == dipId);
             const stessoGiorno = (getYMD(t.data) === dataSelezionata);
@@ -561,6 +579,7 @@
 
         if (collisione) return alert(`ERRORE: Sovrapposizione oraria!`);
 
+        // Salvataggio tramite API
         try {
             const res = await fetch('/api/turni/manuale', {
                 method: 'POST',
@@ -572,11 +591,16 @@
         } catch(e) { alert("Errore connessione."); }
     }
 
+    // Eliminazione di un turno tramite API
     async function eliminaTurno(id) {
         if(confirm("Eliminare?")) { await fetch(`/api/turni/${id}`, { method: 'DELETE' }); location.reload(); }
     }
     
+    // Chiusura modale
     function chiudiModal(id) { document.getElementById(id).style.display = 'none'; }
+    
+    // INIZIALIZZAZIONE APPLICAZIONE
+    // Avviamento del rendering del Calendario al caricamento della pagina
     initCalendario();
 </script>
 </body>
