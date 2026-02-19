@@ -106,7 +106,7 @@
 <div class="navbar">
     <a href="index.html">Home</a>
     <a href="calendario.html" class="active">Calendario</a>
-    <a href="dipendenti.html">Gestione Dipendenti</a>
+    <a href="dipendenti.html">Gestione dipendenti</a>
 </div>
 
 <!--
@@ -114,7 +114,7 @@
     -->
 <div class="container">
     <!-- Titolo della pagina -->
-    <h1>Pianificazione Settimanale</h1>
+    <h1>Pianificazione settimanale</h1>
     <!-- 
         Sezione che contiene le card delle settimane future con:
         - lo stato della settimana (Vuota / In corso / Pianificata)
@@ -130,7 +130,7 @@
         <div class="modal-content" style="width: 95%; max-width: 1400px; height: 90vh; display:flex; flex-direction:column;">
             <!-- Header del modale con titolo e filtro -->
             <div class="modal-header-row">
-                <h2 id="modalTitle" style="margin:0;">Turni Settimana</h2>
+                <h2 id="modalTitle" style="margin:0;">Turni settimana</h2>
                 <div class="header-actions-right">
                     <!-- Filtro dinamico dei dipendenti: 
                         aggiorna la visualizzazione senza ricaricare la pagina
@@ -155,7 +155,7 @@
         <div class="modal-content" style="max-width: 400px;">
             <!-- Chiusura del modale -->
             <span class="close" onclick="chiudiModal('modalAggiungi')">&times;</span>
-            <h3>Aggiungi Turno</h3>
+            <h3>Aggiungi turno</h3>
             <p>Giorno: <strong id="addDateLabel"></strong></p>
             <input type="hidden" id="addDateValue">
             <!-- Selezione del dipendente -->
@@ -169,7 +169,7 @@
             </div>
             <br>
             <!-- Bottone per confermare il salvataggio del turno -->
-            <button class="btn-primary" onclick="salvaTurnoManuale()" style="width:100%;">Salva Turno</button>
+            <button class="btn-primary" onclick="salvaTurnoManuale()" style="width:100%;">Salva turno</button>
         </div>
     </div>
 
@@ -178,7 +178,7 @@
         <div class="modal-content" style="max-width: 450px;">
             <!-- Chiusura del modale -->
             <span class="close" onclick="chiudiModal('modalConfigura')">&times;</span>
-            <h3 style="color: #6f42c1;">⚙️ Configura Generazione</h3>
+            <h3 style="color: #6f42c1;">⚙️ Configura generazione</h3>
             <p>Imposta il numero <strong>minimo</strong> di dipendenti per fascia oraria.</p>
              <!-- Data di riferimento per la generazione -->
             <input type="hidden" id="configDateValue">
@@ -205,7 +205,7 @@
                 <!-- Pulsante di chiusura -->
                 <button class="btn-secondary" onclick="chiudiModal('modalConfigura')">Annulla</button>
                 <!-- Pulsante di conferma -->
-                <button class="btn-primary" onclick="confermaGenerazione()">Genera Turni</button>
+                <button class="btn-primary" onclick="confermaGenerazione()">Genera turni</button>
             </div>
         </div>
     </div>
@@ -302,7 +302,7 @@
                 }
             } else {
                 // Generazione iniziale della settimana
-                buttonsHtml = `<button class="btn-success" onclick="apriConfigurazioneGenerazione('${week.startStr}')">Genera Turni</button>`;
+                buttonsHtml = `<button class="btn-success" onclick="apriConfigurazioneGenerazione('${week.startStr}')">Genera turni</button>`;
             }
 
             // Stato
@@ -310,7 +310,7 @@
                 <div>
                     <h3>Settimana ${week.label}</h3>
                     <span style="color:${hasShifts?'green':'red'}">
-                        ${hasShifts ? (index === 0 ? 'In Corso' : 'Pianificata') : 'Da Pianificare'}
+                        ${hasShifts ? (index === 0 ? 'In corso' : 'Pianificata') : 'Da pianificare'}
                     </span>
                 </div>
                 <div style="display:flex; gap:5px;">
@@ -515,7 +515,7 @@
                 option.disabled = true; option.style.backgroundColor = "#ffe6e6"; select.appendChild(option); return;
             }
 
-            // Calcola quante ore sosno state  già assegnate al dipendente nella settimana
+            // Calcola quante ore sono state  già assegnate al dipendente nella settimana
             const turniSett = tuttiITurni.filter(t => t.dipendente.id == d.id && getYMD(t.data) >= weekStart && getYMD(t.data) <= weekEnd);
             let ore = turniSett.reduce((acc, t) => {
                 let hI = parseInt(t.oraInizio.split(':')[0]), hO = parseInt(t.oraFine.split(':')[0]);
@@ -577,7 +577,7 @@
             return false;
         });
 
-        if (collisione) return alert(`ERRORE: Sovrapposizione oraria!`);
+        if (collisione) return alert(`ERRORE: sovrapposizione di turni!`);
 
         // Salvataggio tramite API
         try {
@@ -587,8 +587,8 @@
                 body: JSON.stringify({ dipendenteId: parseInt(dipId), data: dataSelezionata, oraInizio: startInput, oraFine: endInput })
             });
             if(res.ok) location.reload(); 
-            else { const err = await res.json(); alert("Errore: " + (err.error || "Salvataggio fallito")); }
-        } catch(e) { alert("Errore connessione."); }
+            else { const err = await res.json(); alert("Errore: " + (err.error || "salvataggio fallito")); }
+        } catch(e) { alert("Errore di connessione."); }
     }
 
     // Eliminazione di un turno tramite API

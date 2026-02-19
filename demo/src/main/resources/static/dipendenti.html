@@ -57,15 +57,15 @@
 <div class="navbar">
     <a href="index.html">Home</a>
     <a href="calendario.html">Calendario</a>
-    <a href="dipendenti.html" class="active">Gestione Dipendenti</a>
+    <a href="dipendenti.html" class="active">Gestione dipendenti</a>
 </div>
 
 <!-- CONTENUTO PRINCIPALE -->
 <div class="container">
     <!-- Header della pagina con titolo e pulsante di creazione -->
     <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h1>Il tuo Team</h1>
-        <button class="btn-success" onclick="apriModalCrea()">+ Nuovo Dipendente</button>
+        <h1>Il tuo team</h1>
+        <button class="btn-success" onclick="apriModalCrea()">+ Nuovo dipendente</button>
     </div>
 
     <!-- Tabella elenco dipendenti -->
@@ -87,7 +87,7 @@
 <div id="modalDipendente" class="modal">
     <div class="modal-content">
         <span class="close" onclick="chiudiModals()">&times;</span>
-        <h2 id="modalTitleDip">Nuovo Dipendente</h2>
+        <h2 id="modalTitleDip">Nuovo dipendente</h2>
         <!-- Campo nascosto per distinguere creazione e modifica -->
         <input type="hidden" id="editId">
         
@@ -95,10 +95,10 @@
         <input type="text" id="nome">
         <label>Cognome</label>
         <input type="text" id="cognome">
-        <label>Tipo Contratto</label>
+        <label>Tipo contratto</label>
         <select id="tipoContratto" style="width: 100%; padding: 8px; margin-bottom: 10px;">
-            <option value="FULL_TIME">Full Time</option>
-            <option value="PART_TIME">Part Time</option>
+            <option value="FULL_TIME">Full time</option>
+            <option value="PART_TIME">Part time</option>
         </select>
         <!-- Campi calcolati -->
         <input type="hidden" id="oreSett">
@@ -115,7 +115,7 @@
         
         <!-- Intestazione con nome dipendente e statistiche -->
         <div style="border-bottom: 1px solid #ddd; margin-bottom: 15px; padding-bottom: 10px;">
-            <h2 style="margin: 0;">Gestione Assenze</h2>
+            <h2 style="margin: 0;">Gestione assenze</h2>
             <p style="color: #666; margin: 5px 0;">Dipendente: <strong id="assenzeDipName"></strong></p>
             
             <!-- Box per le statistiche delle assenze -->
@@ -123,22 +123,22 @@
                 <!-- Ferie -->
                 <div class="stat-row" style="border-bottom: 1px dashed #bcdbf3; padding-bottom: 8px;">
                     <div class="stat-item">
-                        <span class="stat-label">Ferie Godute</span>
+                        <span class="stat-label">Ferie godute</span>
                         <strong id="statFerieGodute" class="stat-value val-ferie">0</strong>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">Ferie Residue</span>
+                        <span class="stat-label">Ferie residue</span>
                         <strong id="statFerieResidue" class="stat-value val-residuo">0</strong>
                     </div>
                 </div>
                 <!-- Altre tipologie di assenza -->
                 <div class="stat-row">
                     <div class="stat-item">
-                        <span class="stat-label">Giorni Malattia</span>
+                        <span class="stat-label">Giorni malattia</span>
                         <strong id="statMalattia" class="stat-value val-malattia">0</strong>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">Giorni Permesso</span>
+                        <span class="stat-label">Giorni permesso</span>
                         <strong id="statPermessi" class="stat-value val-permesso">0</strong>
                     </div>
                 </div>
@@ -149,7 +149,7 @@
         <input type="hidden" id="assenzeDipId">
 
         <!-- FORM PER L'INSERIMENTO DI UNA NUOVA ASSENZA -->
-        <h4 style="margin-bottom: 10px;">➕ Nuova Assenza</h4>
+        <h4 style="margin-bottom: 10px;">➕ Nuova assenza</h4>
         <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
             <div style="display: flex; gap: 10px;">
                 <div style="flex: 1;">
@@ -170,11 +170,11 @@
                 </div>
             </div>
             <textarea id="motivazione" rows="1" placeholder="Motivazione (opzionale)..." style="width: 100%; margin-top: 10px; font-size: 0.9em;"></textarea>
-            <button class="btn-primary" onclick="salvaAssenza()" style="width: 100%; margin-top: 10px;">Registra Assenza</button>
+            <button class="btn-primary" onclick="salvaAssenza()" style="width: 100%; margin-top: 10px;">Registra assenza</button>
         </div>
 
         <!-- STORICO ASSENZE -->
-        <h4 style="margin-top: 20px; margin-bottom: 10px;">Storico Assenze</h4>
+        <h4 style="margin-top: 20px; margin-bottom: 10px;">Storico assenze</h4>
         <div class="history-container">
             <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
                 <thead style="background: #f1f1f1; position: sticky; top: 0;">
@@ -224,7 +224,7 @@
                         <td>${d.oreSettimanaliContratto}h</td>
                         <td>
                             <button class="btn-sm btn-primary" onclick='apriModifica(${JSON.stringify(d)})'>Modifica</button>
-                            <button class="btn-sm btn-info" onclick="apriAssenze(${d.id}, '${d.nome} ${d.cognome}', ${d.ferieResidue})">Gestisci Assenze</button>
+                            <button class="btn-sm btn-info" onclick="apriAssenze(${d.id}, '${d.nome} ${d.cognome}', ${d.ferieResidue})">Gestisci assenze</button>
                             <button class="btn-sm btn-danger" onclick="elimina(${d.id})">Elimina</button>
                         </td>
                     </tr>
@@ -235,7 +235,7 @@
 
     // MODALE CREAZIONE
     function apriModalCrea() {
-        document.getElementById('modalTitleDip').innerText = "Nuovo Dipendente";
+        document.getElementById('modalTitleDip').innerText = "Nuovo dipendente";
         document.getElementById('editId').value = "";
         document.getElementById('nome').value = "";
         document.getElementById('cognome').value = "";
@@ -252,7 +252,7 @@
 
     // MODALE MODIFICA
     function apriModifica(d) {
-        document.getElementById('modalTitleDip').innerText = "Modifica Dipendente";
+        document.getElementById('modalTitleDip').innerText = "Modifica dipendente";
         document.getElementById('editId').value = d.id;
         document.getElementById('nome').value = d.nome;
         document.getElementById('cognome').value = d.cognome;
@@ -312,9 +312,9 @@
                 chiudiModals();
                 caricaDipendenti();
             }
-            else alert("Errore salvataggio");
+            else alert("Errore nel salvataggio");
         } catch (e) {
-            alert("Errore connessione");
+            alert("Errore di connessione");
         }
     }
 
@@ -416,7 +416,7 @@
         const motivazione = document.getElementById('motivazione').value;
 
         if(!dataInizio || !dataFine) return alert("Inserisci il range di date (Dal - Al)");
-        if(dataInizio > dataFine) return alert("La data fine non può essere prima dell'inizio");
+        if(dataInizio > dataFine) return alert("La data di fine non può essere prima di quella di inizio");
 
         // Controllo sovrapposizioni
         let checkDate = new Date(dataInizio);
@@ -431,7 +431,7 @@
 
             if (conflitto) {
                 const dataLeggibile = checkDate.toLocaleDateString('it-IT');
-                alert(`IMPOSSIBILE SALVARE:\nEsiste già un'assenza registrata per il giorno ${dataLeggibile} (${conflitto.tipo}).`);
+                alert(`IMPOSSIBILE SALVARE:\nesiste già un'assenza registrata per il giorno ${dataLeggibile} (${conflitto.tipo}).`);
                 return;
             }
             checkDate.setDate(checkDate.getDate() + 1);
@@ -470,11 +470,11 @@
                 caricaDipendenti();
             } else {
                 const err = await res.json();
-                alert("Errore: " + (err.error || "Impossibile salvare"));
+                alert("Errore: " + (err.error || "impossibile salvare"));
             }
         } catch(e) {
             console.error(e);
-            alert("Errore connessione.");
+            alert("Errore di connessione.");
         } finally {
             btn.innerText = originalText;
             btn.disabled = false;
@@ -498,18 +498,18 @@
             }
             else alert("Impossibile eliminare.");
         } catch (e) {
-            alert("Errore connessione.");
+            alert("Errore di connessione.");
         }
     }
 
     // ELIMINAZIONE DIPENDENTE
     async function elimina(id) {
-        if(confirm("Eliminare dipendente?")) {
+        if(confirm("Eliminare il dipendente?")) {
             try {
                 const res = await fetch('/api/turni/dipendenti/' + id, { method: 'DELETE' });
                 if(res.ok) caricaDipendenti();
-                else alert("Errore eliminazione.");
-            } catch (e) { alert("Errore connessione."); }
+                else alert("Impossibile eliminare.");
+            } catch (e) { alert("Errore di connessione."); }
         }
     }
 
