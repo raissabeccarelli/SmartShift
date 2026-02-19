@@ -39,10 +39,10 @@
         .stat-value { font-size: 1.3em; font-weight: bold; }
         
         /* Colori distintivi per tipologia di assenza */
-        .val-ferie { color: #0288d1; } /* Ferie */
-        .val-residuo { color: #2e7d32; } /* Ferie residue */
-        .val-malattia { color: #d32f2f; } /* Malattia */
-        .val-permesso { color: #f57c00; } /* Permesso */
+        .val-ferie { color: #0288d1; }
+        .val-residuo { color: #2e7d32; }
+        .val-malattia { color: #d32f2f; }
+        .val-permesso { color: #f57c00; }
 
         /* Contenitore per lo storico assenze */
         .history-container {
@@ -78,12 +78,12 @@
                 <th>Azioni</th>
             </tr>
         </thead>
-        <!-- Ttabella riempita dinamicamente -->
+        <!-- Tabella riempita dinamicamente -->
         <tbody id="listaDipendenti"></tbody>
     </table>
 </div>
 
-<!-- MODALE DI CREAZIONE E MODIFICA DIPENDENTI-->
+<!-- MODALE DI CREAZIONE E MODIFICA DIPENDENTI -->
 <div id="modalDipendente" class="modal">
     <div class="modal-content">
         <span class="close" onclick="chiudiModals()">&times;</span>
@@ -100,15 +100,15 @@
             <option value="FULL_TIME">Full Time</option>
             <option value="PART_TIME">Part Time</option>
         </select>
- <!-- Campi calcolati -->
-<input type="hidden" id="oreSett">
-<input type="hidden" id="oreMax">
+        <!-- Campi calcolati -->
+        <input type="hidden" id="oreSett">
+        <input type="hidden" id="oreMax">
         
         <button class="btn-primary" onclick="salvaDipendente()">Salva</button>
     </div>
 </div>
 
-<!--  MODALE DI GESTIONE ASSENZE-->
+<!-- MODALE DI GESTIONE ASSENZE -->
 <div id="modalAssenze" class="modal">
     <div class="modal-content" style="max-width: 650px;">
         <span class="close" onclick="chiudiModals()">&times;</span>
@@ -118,30 +118,25 @@
             <h2 style="margin: 0;">Gestione Assenze</h2>
             <p style="color: #666; margin: 5px 0;">Dipendente: <strong id="assenzeDipName"></strong></p>
             
-            <!-- Box per le statistiche delle assenze-->
+            <!-- Box per le statistiche delle assenze -->
             <div class="stat-box">
                 <!-- Ferie -->
                 <div class="stat-row" style="border-bottom: 1px dashed #bcdbf3; padding-bottom: 8px;">
-                    <!-- Ferie già utilizzate -->
                     <div class="stat-item">
                         <span class="stat-label">Ferie Godute</span>
                         <strong id="statFerieGodute" class="stat-value val-ferie">0</strong>
                     </div>
-                     <!-- Ferie ancora disponibili -->
                     <div class="stat-item">
                         <span class="stat-label">Ferie Residue</span>
-                        <!-- Valore calcolato -->
                         <strong id="statFerieResidue" class="stat-value val-residuo">0</strong>
                     </div>
                 </div>
                 <!-- Altre tipologie di assenza -->
                 <div class="stat-row">
-                    <!-- Totale giorni di malattia -->
                     <div class="stat-item">
                         <span class="stat-label">Giorni Malattia</span>
                         <strong id="statMalattia" class="stat-value val-malattia">0</strong>
                     </div>
-                     <!-- Totale giorni di permesso -->
                     <div class="stat-item">
                         <span class="stat-label">Giorni Permesso</span>
                         <strong id="statPermessi" class="stat-value val-permesso">0</strong>
@@ -156,19 +151,15 @@
         <!-- FORM PER L'INSERIMENTO DI UNA NUOVA ASSENZA -->
         <h4 style="margin-bottom: 10px;">➕ Nuova Assenza</h4>
         <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
-            <!-- Sezione date e tipo assenza -->
             <div style="display: flex; gap: 10px;">
-                <!-- Data inizio -->
                 <div style="flex: 1;">
                     <label style="font-size: 0.85em;">Dal</label>
                     <input type="date" id="dataInizio" style="width: 100%; padding: 5px;" onchange="aggiornaDataFine()">
                 </div>
-                 <!-- Data fine -->
                 <div style="flex: 1;">
                     <label style="font-size: 0.85em;">Al</label>
                     <input type="date" id="dataFine" style="width: 100%; padding: 5px;">
                 </div>
-                <!-- Tipologia assenza -->
                 <div style="flex: 1;">
                     <label style="font-size: 0.85em;">Tipo</label>
                     <select id="tipoAssenza" style="width: 100%; padding: 6px;">
@@ -178,17 +169,14 @@
                     </select>
                 </div>
             </div>
-            <!-- Motivazione -->
             <textarea id="motivazione" rows="1" placeholder="Motivazione (opzionale)..." style="width: 100%; margin-top: 10px; font-size: 0.9em;"></textarea>
-             <!-- Pulsante di salvataggio dell'assenza -->
             <button class="btn-primary" onclick="salvaAssenza()" style="width: 100%; margin-top: 10px;">Registra Assenza</button>
         </div>
 
-        <!-- STORICO ASSENZE (tabella popolata dinamicamente) -->
+        <!-- STORICO ASSENZE -->
         <h4 style="margin-top: 20px; margin-bottom: 10px;">Storico Assenze</h4>
         <div class="history-container">
             <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
-                <!-- Intestazione fissa -->
                 <thead style="background: #f1f1f1; position: sticky; top: 0;">
                     <tr>
                         <th style="padding: 8px; text-align: left;">Data</th>
@@ -197,7 +185,6 @@
                         <th style="padding: 8px; text-align: center;">Azioni</th>
                     </tr>
                 </thead>
-                 <!-- Corpo popolato -->
                 <tbody id="listaAssenzeStorico"></tbody>
             </table>
         </div>
@@ -206,22 +193,29 @@
 
 <script>
     /* COSTANTI E VARIABILI GLOBALI */
-    // Numero di giorni di ferie standard
     const FERIE_ANNUALI_STANDARD = 26;
-    // Array che contiene le assenze del dipendente selezionato
-    let currentEmployeeAbsences = []; 
+    let currentEmployeeAbsences = [];
+
+    // Funzione di supporto per aggiornare il box ferie residue nella modale
+    async function aggiornaDatiDipendente(id) {
+        const dipRes = await fetch('/api/turni/dipendenti');
+        const dipList = await dipRes.json();
+        const dipCorrente = dipList.find(d => d.id == id);
+        if (dipCorrente) {
+            const elResiduo = document.getElementById('statFerieResidue');
+            elResiduo.innerText = dipCorrente.ferieResidue;
+            elResiduo.style.color = dipCorrente.ferieResidue < 0 ? 'red' : '#2e7d32';
+        }
+    }
 
     // DIPENDENTI
-    // Carica l'elenco dei dipendenti
     async function caricaDipendenti() {
         try {
-            // Chiamata REST al backend
             const res = await fetch('/api/turni/dipendenti');
             const list = await res.json();
             const tbody = document.getElementById('listaDipendenti');
             tbody.innerHTML = '';
 
-            // Popolamento dinamico della tabella
             list.forEach(d => {
                 tbody.innerHTML += `
                     <tr>
@@ -238,36 +232,31 @@
             });
         } catch (e) { console.error(e); }
     }
-    
-    // MODALE DI CREAZIONE DEI DIPENDENTI
-    // Apertura modale in modalità creazione
+
+    // MODALE CREAZIONE
     function apriModalCrea() {
-        // Reset dei campi
         document.getElementById('modalTitleDip').innerText = "Nuovo Dipendente";
         document.getElementById('editId').value = "";
         document.getElementById('nome').value = "";
         document.getElementById('cognome').value = "";
         document.getElementById('oreSett').value = "";
         document.getElementById('oreMax').value = "";
-        
-        // Rende modificabili nome e cognome
+
         const nomeIn = document.getElementById('nome');
         const cognIn = document.getElementById('cognome');
         nomeIn.readOnly = false; cognIn.readOnly = false;
         nomeIn.style.backgroundColor = "white"; cognIn.style.backgroundColor = "white";
-        
+
         document.getElementById('modalDipendente').style.display = 'flex';
     }
 
-    // MODALE DI MODIFICA DEI DIPENDENTI
-    // Apre il modal in modalità modifica
+    // MODALE MODIFICA
     function apriModifica(d) {
         document.getElementById('modalTitleDip').innerText = "Modifica Dipendente";
         document.getElementById('editId').value = d.id;
         document.getElementById('nome').value = d.nome;
         document.getElementById('cognome').value = d.cognome;
 
-        // Seleziona automaticamente l'opzione corretta per il tipo di contratto nel menu a tendina
         const selectContratto = document.getElementById('tipoContratto');
         if (d.oreSettimanaliContratto >= 40) {
             selectContratto.value = "FULL_TIME";
@@ -275,26 +264,23 @@
             selectContratto.value = "PART_TIME";
         }
 
-        // Gestione campi nome e cognome (sola lettura in fase di modifica)
         const nomeIn = document.getElementById('nome');
         const cognIn = document.getElementById('cognome');
-        nomeIn.readOnly = true; 
+        nomeIn.readOnly = true;
         cognIn.readOnly = true;
-        nomeIn.style.backgroundColor = "#e9ecef"; 
+        nomeIn.style.backgroundColor = "#e9ecef";
         cognIn.style.backgroundColor = "#e9ecef";
 
         document.getElementById('modalDipendente').style.display = 'flex';
     }
 
-    // SALVATAGGIO DIPENDENTI
+    // SALVATAGGIO DIPENDENTE
     async function salvaDipendente() {
-        // Recupero dei valori dal form
         const id = document.getElementById('editId').value;
         const nome = document.getElementById('nome').value;
         const cognome = document.getElementById('cognome').value;
         const tipoContratto = document.getElementById('tipoContratto').value;
 
-        // Logica di assegnazione automatica del contratto
         let oreSett, oreMax;
         if (tipoContratto === "FULL_TIME") {
             oreSett = 40;
@@ -304,237 +290,219 @@
             oreMax = 4;
         }
 
-        // Obbligatorio inserire nome e cognome
         if (!nome || !cognome) {
             return alert("Compila nome e cognome");
         }
 
-        // Oggetto dipendente da inviare al backend
-        const dip = { 
-            id: id ? id : null, // Se id esiste è un'operazione di modifica, altrimenti è di creazione
-            nome, 
-            cognome, 
-            oreSettimanaliContratto: oreSett, 
-            oreGiornaliereMax: oreMax 
+        const dip = {
+            id: id ? id : null,
+            nome,
+            cognome,
+            oreSettimanaliContratto: oreSett,
+            oreGiornaliereMax: oreMax
         };
 
         try {
-            // Chiamata REST al backend
             const res = await fetch('/api/turni/dipendenti', {
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(dip)
             });
-            // Se il salvataggio va a buon fine aggiorna UI
-            if(res.ok) { 
-                chiudiModals(); 
-                caricaDipendenti(); 
-            } 
+            if(res.ok) {
+                chiudiModals();
+                caricaDipendenti();
+            }
             else alert("Errore salvataggio");
-        } catch (e) { 
-            alert("Errore connessione"); 
+        } catch (e) {
+            alert("Errore connessione");
         }
-     }
+    }
 
     // ASSENZE
-    // Sincronizza la data di fine, evitando che sia precedente a quella di inizio
     function aggiornaDataFine() {
         const inizio = document.getElementById('dataInizio').value;
         const fineInput = document.getElementById('dataFine');
         if (inizio) {
             if (!fineInput.value || fineInput.value < inizio) {
-                  fineInput.value = inizio;
+                fineInput.value = inizio;
             }
         }
     }
 
-    // Apertura della modale di gestione delle assenze
+    // Apertura modale assenze
     async function apriAssenze(id, nomeCompleto, residuoReale) {
-        // Salva l'ID del dipendente corrente
         document.getElementById('assenzeDipId').value = id;
-        // Mostra il nome del dipendente nel titolo
         document.getElementById('assenzeDipName').innerText = nomeCompleto;
-        
-        // Imposta le ferie residue dal backend
+
         const elResiduo = document.getElementById('statFerieResidue');
         elResiduo.innerText = residuoReale;
-         // Evidenzia in rosso se è negativo
         elResiduo.style.color = residuoReale < 0 ? 'red' : '#2e7d32';
 
-        // Reset dei campi del form
         document.getElementById('dataInizio').value = "";
         document.getElementById('dataFine').value = "";
         document.getElementById('motivazione').value = "";
         document.getElementById('tipoAssenza').value = "FERIE";
 
-        // Carica lo storico assenze del dipendente
         await caricaAssenzeDipendente(id);
         document.getElementById('modalAssenze').style.display = 'flex';
     }
 
-    // Caricamento delle assenze del dipendente selezionato
+    // Caricamento assenze del dipendente
     async function caricaAssenzeDipendente(dipId) {
-    const tbody = document.getElementById('listaAssenzeStorico');
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Caricamento...</td></tr>';
+        const tbody = document.getElementById('listaAssenzeStorico');
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Caricamento...</td></tr>';
 
-    // Stato temporaneo di caricamento
-    try {
-        // Recupero delle assenze
-        const res = await fetch('/api/turni/assenze');
-        const tutteAssenze = await res.json();
+        try {
+            const res = await fetch('/api/turni/assenze');
+            const tutteAssenze = await res.json();
 
-        // Filtro per ID dipendente
-        const assenzeDip = tutteAssenze.filter(a => {
-            const aId = a.dipendente ? a.dipendente.id : (a.dipendenteId || a.dipendente_id);
-            return aId == dipId;
-        });
-        
-        // Salvataggio delle assenze in memoria
-        currentEmployeeAbsences = assenzeDip;
-        // Ordinamento per data decrescente
-        assenzeDip.sort((a, b) => new Date(b.data) - new Date(a.data));
+            const assenzeDip = tutteAssenze.filter(a => {
+                const aId = a.dipendente ? a.dipendente.id : (a.dipendenteId || a.dipendente_id);
+                return aId == dipId;
+            });
 
-        // Reset tabella
-        tbody.innerHTML = '';
-         // Se non c'è nessuna assenza
-        if (assenzeDip.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999;">Nessuna assenza.</td></tr>';
-            return; // Se non ci sono dati interrompe l'esecuzione
-        }
+            currentEmployeeAbsences = assenzeDip;
+            assenzeDip.sort((a, b) => new Date(b.data) - new Date(a.data));
 
-        // CALCOLO STATISTICHE
-        let ferieGodute = 0;
-        let malattiaCount = 0;
-        let permessoCount = 0;
+            tbody.innerHTML = '';
 
-        // GENERAZIONE RIGHE DELLA TABELLA
-        assenzeDip.forEach(a => {
-            // Conteggio assenze per tipologia
-            if (a.tipo === 'FERIE') ferieGodute++;
-            else if (a.tipo === 'MALATTIA') malattiaCount++;
-            else if (a.tipo === 'PERMESSO') permessoCount++;
-            
-            // Formattazione data
-            const dataObj = new Date(a.data);
-            const dataFmt = isNaN(dataObj) ? a.data : dataObj.toLocaleDateString('it-IT');
+            if (assenzeDip.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999;">Nessuna assenza.</td></tr>';
+                return;
+            }
 
-            // Motivazione
-            const mot = a.motivazione || a.note || "-";
+            let ferieGodute = 0;
+            let malattiaCount = 0;
+            let permessoCount = 0;
 
-            // Creazione delle righe della tabella
-            tbody.innerHTML += `
-                <tr style="border-bottom: 1px solid #eee;">
-                    <td style="padding: 8px;">${dataFmt}</td>
-                    <td style="padding: 8px;">${a.tipo}</td>
-                    <td style="padding: 8px;"><small style="color:#666;">${mot}</small></td>
-                    <td style="padding: 8px; text-align: center;">
-                        <button class="btn-sm" style="background:transparent; color:red; border:none; cursor:pointer; font-weight:bold; font-size:1.2em;" 
-                            onclick="eliminaAssenza(${a.id}, ${dipId})" title="Elimina">&times;</button>
-                    </td>
-                </tr>
-            `;
-        });
+            assenzeDip.forEach(a => {
+                if (a.tipo === 'FERIE') ferieGodute++;
+                else if (a.tipo === 'MALATTIA') malattiaCount++;
+                else if (a.tipo === 'PERMESSO') permessoCount++;
 
-        // Aggiornamento del box statistiche
-        document.getElementById('statFerieGodute').innerText = ferieGodute;
-        document.getElementById('statMalattia').innerText = malattiaCount;
-        document.getElementById('statPermessi').innerText = permessoCount;
+                const dataObj = new Date(a.data);
+                const dataFmt = isNaN(dataObj) ? a.data : dataObj.toLocaleDateString('it-IT');
+                const mot = a.motivazione || a.note || "-";
 
-        } catch (e) { 
-            console.error("Errore:", e); 
+                tbody.innerHTML += `
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 8px;">${dataFmt}</td>
+                        <td style="padding: 8px;">${a.tipo}</td>
+                        <td style="padding: 8px;"><small style="color:#666;">${mot}</small></td>
+                        <td style="padding: 8px; text-align: center;">
+                            <button class="btn-sm" style="background:transparent; color:red; border:none; cursor:pointer; font-weight:bold; font-size:1.2em;" 
+                                onclick="eliminaAssenza(${a.id}, ${dipId})" title="Elimina">&times;</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('statFerieGodute').innerText = ferieGodute;
+            document.getElementById('statMalattia').innerText = malattiaCount;
+            document.getElementById('statPermessi').innerText = permessoCount;
+
+        } catch (e) {
+            console.error("Errore:", e);
             tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Errore nel caricamento.</td></tr>';
         }
     }
 
-    //  SALVATAGGIO NUOVA ASSENZA
+    // SALVATAGGIO NUOVA ASSENZA
     async function salvaAssenza() {
-        // Recupero dati dal form
         const id = document.getElementById('assenzeDipId').value;
         const dataInizio = document.getElementById('dataInizio').value;
         const dataFine = document.getElementById('dataFine').value;
         const tipo = document.getElementById('tipoAssenza').value;
         const motivazione = document.getElementById('motivazione').value;
 
-        // Le date di inizio e fine sono obbligatorie
         if(!dataInizio || !dataFine) return alert("Inserisci il range di date (Dal - Al)");
         if(dataInizio > dataFine) return alert("La data fine non può essere prima dell'inizio");
 
-        // Controllo sulle sovrapposizioni con altre ferie già registrate per il dipendente
+        // Controllo sovrapposizioni
         let checkDate = new Date(dataInizio);
         const endDateObj = new Date(dataFine);
 
-        // Scorrimento di tutti i giorni dell'intervallo
         while (checkDate <= endDateObj) {
-            // Conversione del formato della data
             const checkStr = checkDate.toISOString().split('T')[0];
-            // Rierca di eventuali conflitti con assenze già registrate
             const conflitto = currentEmployeeAbsences.find(a => {
                 const dataEsistente = typeof a.data === 'string' ? a.data.split('T')[0] : new Date(a.data).toISOString().split('T')[0];
                 return dataEsistente === checkStr;
             });
 
-            // Se trova un conflitto blocca il salvataggio
             if (conflitto) {
                 const dataLeggibile = checkDate.toLocaleDateString('it-IT');
                 alert(`IMPOSSIBILE SALVARE:\nEsiste già un'assenza registrata per il giorno ${dataLeggibile} (${conflitto.tipo}).`);
                 return;
             }
-            // Passa al giorno successivo
             checkDate.setDate(checkDate.getDate() + 1);
         }
 
-        // FEEDBACK VISIVO DURANTE SALVATAGGIO (disabilita il pulsante)
+        // Feedback visivo durante salvataggio
         const btn = document.querySelector('#modalAssenze .btn-primary');
         const originalText = btn.innerText;
         btn.innerText = "Salvataggio..."; btn.disabled = true;
 
-        // CHIAMATA API PER IL SALVATAGGIO ASSENZA
         try {
-            const res = await fetch('/api/turni/assenza', { 
+            const res = await fetch('/api/turni/assenza', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    dipendenteId: id, 
-                    dataInizio: dataInizio, 
+                body: JSON.stringify({
+                    dipendenteId: id,
+                    dataInizio: dataInizio,
                     dataFine: dataFine,
-                    tipo: tipo, 
-                    motivazione: motivazione 
-                }) 
+                    tipo: tipo,
+                    motivazione: motivazione
+                })
             });
 
             if (res.ok) {
-                // Reset campi del form
                 document.getElementById('dataInizio').value = "";
                 document.getElementById('dataFine').value = "";
                 document.getElementById('motivazione').value = "";
-                // Aggiornamento storico assenze
+
+                // Aggiorna lo storico assenze
                 await caricaAssenzeDipendente(id);
-                // Ricaricamento dei dipendenti per aggiornare le ferie residue
-                caricaDipendenti(); 
+
+                // Aggiorna le ferie residue nella modale rileggendo dal backend
+                await aggiornaDatiDipendente(id);
+
+                // Aggiorna la tabella principale
+                caricaDipendenti();
             } else {
                 const err = await res.json();
                 alert("Errore: " + (err.error || "Impossibile salvare"));
             }
-        } catch(e) { console.error(e); alert("Errore connessione."); } 
-        // Ripristino dello stato del pulsante
-        finally { btn.innerText = originalText; btn.disabled = false; }
+        } catch(e) {
+            console.error(e);
+            alert("Errore connessione.");
+        } finally {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
     }
 
     // ELIMINAZIONE ASSENZA
     async function eliminaAssenza(assenzaId, dipId) {
-         // Conferma dell'eliminazione da parte dell'utente
         if(!confirm("Vuoi eliminare questa assenza?")) return;
         try {
             const res = await fetch(`/api/turni/assenza/${assenzaId}`, { method: 'DELETE' });
             if (res.ok) {
-                await caricaAssenzeDipendente(dipId); // Aggiorna lo storico ferie
-                caricaDipendenti(); // Aggiorna le ferie residue
+                // Aggiorna lo storico assenze
+                await caricaAssenzeDipendente(dipId);
+
+                // Aggiorna le ferie residue nella modale rileggendo dal backend
+                await aggiornaDatiDipendente(dipId);
+
+                // Aggiorna la tabella principale
+                caricaDipendenti();
             }
             else alert("Impossibile eliminare.");
-        } catch (e) { alert("Errore connessione."); }
+        } catch (e) {
+            alert("Errore connessione.");
+        }
     }
 
-    //  ELIMINAZIONE DIPENDENTE
+    // ELIMINAZIONE DIPENDENTE
     async function elimina(id) {
         if(confirm("Eliminare dipendente?")) {
             try {
@@ -545,7 +513,7 @@
         }
     }
 
-    //  CHIUSURA MODALE
+    // CHIUSURA MODALI
     function chiudiModals() {
         document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
     }
