@@ -31,7 +31,7 @@ public class DataLoader implements CommandLineRunner{
         // Inserimento di dipendenti di test
         dipendenteRepository.save(new Dipendente("Mario", "Rossi", 40, 8, 26)); // Full-time
         dipendenteRepository.save(new Dipendente("Luigi", "Verdi", 20, 4, 26)); // Part-time
-        dipendenteRepository.save(new Dipendente("Anna", "Bianchi", 30, 6, 26)); // Contratto ridotto
+        dipendenteRepository.save(new Dipendente("Anna", "Bianchi", 20, 6, 26)); // Part-time
 
         System.out.println("Dati inseriti con successo!");
     }
